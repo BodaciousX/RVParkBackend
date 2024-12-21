@@ -9,6 +9,10 @@ import (
 	"github.com/BodaciousX/RVParkBackend/user"
 )
 
+type contextKey string
+
+const userContextKey contextKey = "user"
+
 type AuthMiddleware struct {
 	userService user.Service
 }
@@ -43,36 +47,26 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Add user to request context
-		ctx := context.WithValue(r.Context(), "user", user)
+		ctx := context.WithValue(r.Context(), userContextKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (m *AuthMiddleware) RequireRole(roles ...user.Role) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Get user from context (set by RequireAuth)
-			contextUser := r.Context().Value("user")
-			if contextUser == nil {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
+func (m *AuthMiddleware) RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Get user from context (set by RequireAuth)
+		contextUser := r.Context().Value(userContextKey)
+		if contextUser == nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 
-			user := contextUser.(*user.User)
-			hasRole := false
-			for _, role := range roles {
-				if user.Role == role {
-					hasRole = true
-					break
-				}
-			}
+		user := contextUser.(*user.User)
+		if user.Role != "ADMIN" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
 
-			if !hasRole {
-				http.Error(w, "forbidden", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
+		next.ServeHTTP(w, r)
+	})
 }
