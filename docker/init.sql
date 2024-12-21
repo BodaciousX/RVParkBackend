@@ -11,7 +11,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create enums if they don't exist
 SELECT create_enum_if_not_exists('user_role', 
-    ARRAY['ADMIN', 'MANAGER', 'STAFF']
+    ARRAY['ADMIN', 'STAFF']
 );
 
 SELECT create_enum_if_not_exists('space_status', 
