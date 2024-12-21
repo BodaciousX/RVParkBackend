@@ -13,10 +13,6 @@ fi
 # Start fresh containers
 docker-compose up -d
 
-# Wait a bit for database to initialize
-echo "Waiting for database to start..."
-sleep 5
-
 # Run the application
 cd ..
 go mod tidy

@@ -1,3 +1,6 @@
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Function to create enum if it doesn't exist
 CREATE OR REPLACE FUNCTION create_enum_if_not_exists(enum_name TEXT, enum_values TEXT[])
 RETURNS void AS $$
@@ -11,20 +14,20 @@ $$ LANGUAGE plpgsql;
 
 -- Create enums if they don't exist
 SELECT create_enum_if_not_exists('user_role', 
-    ARRAY['ADMIN', 'STAFF']
+    ARRAY['''ADMIN''', '''STAFF''']
 );
 
 SELECT create_enum_if_not_exists('space_status', 
-    ARRAY['Occupied (Paid)', 'Occupied (Payment Due)', 'Occupied (Overdue)', 
-          'Vacant', 'Reserved', 'N/A']
+    ARRAY['''Occupied (Paid)''', '''Occupied (Payment Due)''', '''Occupied (Overdue)''', 
+          '''Vacant''', '''Reserved''', '''N/A''']
 );
 
 SELECT create_enum_if_not_exists('payment_type', 
-    ARRAY['Monthly', 'Weekly']
+    ARRAY['''Monthly''', '''Weekly''']
 );
 
 SELECT create_enum_if_not_exists('payment_status', 
-    ARRAY['Paid', 'Due', 'Overdue']
+    ARRAY['''Paid''', '''Due''', '''Overdue''']
 );
 
 -- Create tokens table if it doesn't exist

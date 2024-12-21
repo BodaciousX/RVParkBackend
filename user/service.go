@@ -25,8 +25,9 @@ func NewService(repo Repository, tokenRepo TokenRepository) Service {
 	}
 }
 
-// Added missing methods:
-
+func (s *service) GetUserByEmail(email string) (*User, error) {
+	return s.repo.GetByEmail(email)
+}
 func (s *service) CreateUser(user User, password string) error {
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -82,8 +83,6 @@ func (s *service) ChangePassword(userID string, oldPassword, newPassword string)
 	user.PasswordHash = string(hashedPassword)
 	return s.repo.Update(*user)
 }
-
-// Existing methods:
 
 func (s *service) Login(creds LoginCredentials) (*User, string, error) {
 	user, err := s.repo.GetByEmail(creds.Email)

@@ -4,6 +4,7 @@ package user
 type Service interface {
 	CreateUser(user User, password string) error
 	GetUser(id string) (*User, error)
+	GetUserByEmail(email string) (*User, error)
 	UpdateUser(user User) error
 	DeleteUser(id string) error
 	Login(creds LoginCredentials) (*User, string, error)
