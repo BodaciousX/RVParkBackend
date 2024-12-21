@@ -1,4 +1,4 @@
-// api/server.go contains the implementation of the API server.
+// api/server.go
 package api
 
 import (
@@ -33,45 +33,79 @@ func NewServer(
 	}
 
 	// Public routes
-	s.Mux.Handle("POST /login", s.handleLogin())
+	s.Mux.Handle("POST /login", middleware.CORS(http.HandlerFunc(s.handleLogin)))
 
 	// User routes (protected)
-	s.Mux.Handle("GET /users", authMiddleware.RequireAuth(
+	s.Mux.Handle("GET /users", middleware.CORS(authMiddleware.RequireAuth(
 		authMiddleware.RequireRole(user.RoleAdmin)(
-			s.handleListUsers(),
+			http.HandlerFunc(s.handleListUsers),
 		),
-	))
-	s.Mux.Handle("POST /users", authMiddleware.RequireAuth(
+	)))
+	s.Mux.Handle("POST /users", middleware.CORS(authMiddleware.RequireAuth(
 		authMiddleware.RequireRole(user.RoleAdmin)(
-			s.handleCreateUser(),
+			http.HandlerFunc(s.handleCreateUser),
 		),
-	))
-	s.Mux.Handle("GET /users/{id}", authMiddleware.RequireAuth(s.handleGetUser()))
-	s.Mux.Handle("PUT /users/{id}", authMiddleware.RequireAuth(s.handleUpdateUser()))
-	s.Mux.Handle("DELETE /users/{id}", authMiddleware.RequireAuth(
+	)))
+	s.Mux.Handle("GET /users/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleGetUser),
+	)))
+	s.Mux.Handle("PUT /users/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleUpdateUser),
+	)))
+	s.Mux.Handle("DELETE /users/{id}", middleware.CORS(authMiddleware.RequireAuth(
 		authMiddleware.RequireRole(user.RoleAdmin)(
-			s.handleDeleteUser(),
+			http.HandlerFunc(s.handleDeleteUser),
 		),
-	))
+	)))
 
 	// Space routes
-	s.Mux.Handle("GET /spaces", authMiddleware.RequireAuth(s.handleListSpaces()))
-	s.Mux.Handle("GET /spaces/{id}", authMiddleware.RequireAuth(s.handleGetSpace()))
-	s.Mux.Handle("PUT /spaces/{id}", authMiddleware.RequireAuth(s.handleUpdateSpace()))
-	s.Mux.Handle("GET /spaces/vacant", authMiddleware.RequireAuth(s.handleGetVacantSpaces()))
-	s.Mux.Handle("POST /spaces/{id}/reserve", authMiddleware.RequireAuth(s.handleReserveSpace()))
-	s.Mux.Handle("POST /spaces/{id}/unreserve", authMiddleware.RequireAuth(s.handleUnreserveSpace()))
-	s.Mux.Handle("POST /spaces/{id}/move-in", authMiddleware.RequireAuth(s.handleMoveIn()))
-	s.Mux.Handle("POST /spaces/{id}/move-out", authMiddleware.RequireAuth(s.handleMoveOut()))
+	s.Mux.Handle("GET /spaces", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleListSpaces),
+	)))
+	s.Mux.Handle("GET /spaces/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleGetSpace),
+	)))
+	s.Mux.Handle("PUT /spaces/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleUpdateSpace),
+	)))
+	s.Mux.Handle("GET /spaces/vacant", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleGetVacantSpaces),
+	)))
+	s.Mux.Handle("POST /spaces/{id}/reserve", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleReserveSpace),
+	)))
+	s.Mux.Handle("POST /spaces/{id}/unreserve", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleUnreserveSpace),
+	)))
+	s.Mux.Handle("POST /spaces/{id}/move-in", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleMoveIn),
+	)))
+	s.Mux.Handle("POST /spaces/{id}/move-out", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleMoveOut),
+	)))
 
 	// Tenant routes
-	s.Mux.Handle("GET /tenants", authMiddleware.RequireAuth(s.handleListTenants()))
-	s.Mux.Handle("POST /tenants", authMiddleware.RequireAuth(s.handleCreateTenant()))
-	s.Mux.Handle("GET /tenants/{id}", authMiddleware.RequireAuth(s.handleGetTenant()))
-	s.Mux.Handle("PUT /tenants/{id}", authMiddleware.RequireAuth(s.handleUpdateTenant()))
-	s.Mux.Handle("DELETE /tenants/{id}", authMiddleware.RequireAuth(s.handleDeleteTenant()))
-	s.Mux.Handle("GET /tenants/{id}/payments", authMiddleware.RequireAuth(s.handleGetTenantPayments()))
-	s.Mux.Handle("POST /tenants/{id}/payments", authMiddleware.RequireAuth(s.handleRecordPayment()))
+	s.Mux.Handle("GET /tenants", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleListTenants),
+	)))
+	s.Mux.Handle("POST /tenants", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleCreateTenant),
+	)))
+	s.Mux.Handle("GET /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleGetTenant),
+	)))
+	s.Mux.Handle("PUT /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleUpdateTenant),
+	)))
+	s.Mux.Handle("DELETE /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleDeleteTenant),
+	)))
+	s.Mux.Handle("GET /tenants/{id}/payments", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleGetTenantPayments),
+	)))
+	s.Mux.Handle("POST /tenants/{id}/payments", middleware.CORS(authMiddleware.RequireAuth(
+		http.HandlerFunc(s.handleRecordPayment),
+	)))
 
 	return s
 }
