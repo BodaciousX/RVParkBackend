@@ -24,9 +24,17 @@ type RecordPaymentRequest struct {
 }
 
 func (s *Server) handleListTenants(w http.ResponseWriter, r *http.Request) {
-	// To be implemented
+	tenants, err := s.tenantService.ListTenants()
+	if err != nil {
+		http.Error(w, "failed to fetch tenants", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("[]"))
+	if err := json.NewEncoder(w).Encode(tenants); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleCreateTenant(w http.ResponseWriter, r *http.Request) {

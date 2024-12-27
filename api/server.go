@@ -32,34 +32,100 @@ func NewServer(
 		authMiddleware: authMiddleware,
 	}
 
-	// Public routes
-	s.Mux.Handle("POST /login", middleware.CORS(http.HandlerFunc(s.handleLogin)))
+	// Public routes with CORS
+	s.Mux.Handle("/login", middleware.CORS(http.HandlerFunc(s.handleLogin)))
 
+	// Protected routes with auth and CORS
 	// User routes - Admin only
-	s.Mux.Handle("GET /users", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleListUsers)))))
-	s.Mux.Handle("POST /users", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleCreateUser)))))
-	s.Mux.Handle("GET /users/{id}", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleGetUser)))))
-	s.Mux.Handle("PUT /users/{id}", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleUpdateUser)))))
-	s.Mux.Handle("DELETE /users/{id}", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleDeleteUser)))))
+	s.Mux.Handle("/users", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleListUsers)))))
+	s.Mux.Handle("/users/", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleUserOperations)))))
 
-	// Space routes - Auth required
-	s.Mux.Handle("GET /spaces", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListSpaces))))
-	s.Mux.Handle("GET /spaces/{id}", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetSpace))))
-	s.Mux.Handle("PUT /spaces/{id}", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleUpdateSpace))))
-	s.Mux.Handle("GET /spaces/vacant", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetVacantSpaces))))
-	s.Mux.Handle("POST /spaces/{id}/reserve", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleReserveSpace))))
-	s.Mux.Handle("POST /spaces/{id}/unreserve", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleUnreserveSpace))))
-	s.Mux.Handle("POST /spaces/{id}/move-in", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleMoveIn))))
-	s.Mux.Handle("POST /spaces/{id}/move-out", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleMoveOut))))
+	// Space routes
+	s.Mux.Handle("/spaces", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListSpaces))))
+	s.Mux.Handle("/spaces/vacant", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetVacantSpaces))))
+	s.Mux.Handle("/spaces/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleSpaceOperations))))
 
-	// Tenant routes - Auth required
-	s.Mux.Handle("GET /tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListTenants))))
-	s.Mux.Handle("POST /tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleCreateTenant))))
-	s.Mux.Handle("GET /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetTenant))))
-	s.Mux.Handle("PUT /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleUpdateTenant))))
-	s.Mux.Handle("DELETE /tenants/{id}", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleDeleteTenant)))))
-	s.Mux.Handle("GET /tenants/{id}/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetTenantPayments))))
-	s.Mux.Handle("POST /tenants/{id}/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleRecordPayment))))
+	// Tenant routes
+	s.Mux.Handle("/tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantList))))
+	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
 
 	return s
+}
+
+// Handler for all user-related operations that need path parsing
+func (s *Server) handleUserOperations(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetUser(w, r)
+	case http.MethodPut:
+		s.handleUpdateUser(w, r)
+	case http.MethodDelete:
+		s.handleDeleteUser(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// Handler for all space-related operations that need path parsing
+func (s *Server) handleSpaceOperations(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	switch {
+	case r.Method == http.MethodGet:
+		s.handleGetSpace(w, r)
+	case r.Method == http.MethodPut:
+		s.handleUpdateSpace(w, r)
+	case r.Method == http.MethodPost && len(path) > 8:
+		switch {
+		case path[len(path)-8:] == "/reserve":
+			s.handleReserveSpace(w, r)
+		case path[len(path)-10:] == "/unreserve":
+			s.handleUnreserveSpace(w, r)
+		case path[len(path)-8:] == "/move-in":
+			s.handleMoveIn(w, r)
+		case path[len(path)-9:] == "/move-out":
+			s.handleMoveOut(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// Handler for tenant list operations
+func (s *Server) handleTenantList(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		s.handleListTenants(w, r)
+	case http.MethodPost:
+		s.handleCreateTenant(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// Handler for all tenant-related operations that need path parsing
+func (s *Server) handleTenantOperations(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	switch {
+	case r.Method == http.MethodGet:
+		if len(path) > 16 && path[len(path)-9:] == "/payments" {
+			s.handleGetTenantPayments(w, r)
+		} else {
+			s.handleGetTenant(w, r)
+		}
+	case r.Method == http.MethodPut:
+		s.handleUpdateTenant(w, r)
+	case r.Method == http.MethodDelete:
+		// Check if user is admin for delete operation
+		if user, ok := r.Context().Value(middleware.UserContextKey).(*user.User); !ok || user.Role != "ADMIN" {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		s.handleDeleteTenant(w, r)
+	case r.Method == http.MethodPost && len(path) > 9 && path[len(path)-9:] == "/payments":
+		s.handleRecordPayment(w, r)
+	default:
+		http.NotFound(w, r)
+	}
 }

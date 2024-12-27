@@ -29,6 +29,10 @@ func (s *service) DeleteTenant(id string) error {
 	return s.repo.Delete(id)
 }
 
+func (s *service) ListTenants() ([]Tenant, error) {
+	return s.repo.List()
+}
+
 func (s *service) GetTenantPayments(tenantID string) ([]Payment, error) {
 	return s.repo.ListPayments(tenantID)
 }

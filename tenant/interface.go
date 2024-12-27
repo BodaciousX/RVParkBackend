@@ -1,7 +1,8 @@
-// tenant/interface.go contains the interface for the tenant package.
+// tenant/interface.go
 package tenant
 
 type Service interface {
+	ListTenants() ([]Tenant, error)
 	CreateTenant(tenant Tenant) error
 	GetTenant(id string) (*Tenant, error)
 	UpdateTenant(tenant Tenant) error
@@ -12,6 +13,7 @@ type Service interface {
 }
 
 type Repository interface {
+	List() ([]Tenant, error)
 	Create(tenant Tenant) error
 	Get(id string) (*Tenant, error)
 	Update(tenant Tenant) error

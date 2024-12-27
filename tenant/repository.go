@@ -85,6 +85,47 @@ func (r *sqlRepository) Delete(id string) error {
 	return err
 }
 
+func (r *sqlRepository) List() ([]Tenant, error) {
+	query := `
+		SELECT 
+			id,
+			name,
+			phone,
+			move_in_date,
+			space_id
+		FROM tenants
+		ORDER BY name
+	`
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tenants []Tenant
+	for rows.Next() {
+		var tenant Tenant
+		err := rows.Scan(
+			&tenant.ID,
+			&tenant.Name,
+			&tenant.Phone,
+			&tenant.MoveInDate,
+			&tenant.SpaceID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tenants = append(tenants, tenant)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tenants, nil
+}
+
 func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 	query := `
 		SELECT 

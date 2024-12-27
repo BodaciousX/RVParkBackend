@@ -9,6 +9,8 @@ import (
 	"github.com/BodaciousX/RVParkBackend/user"
 )
 
+var UserContextKey = contextKey("user")
+
 type contextKey string
 
 const userContextKey contextKey = "user"
