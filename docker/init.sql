@@ -23,7 +23,7 @@ SELECT create_enum_if_not_exists('space_status',
 );
 
 SELECT create_enum_if_not_exists('payment_type', 
-    ARRAY['''Monthly''', '''Weekly''']
+    ARRAY['''Monthly''', '''Weekly''', '''Daily''']
 );
 
 SELECT create_enum_if_not_exists('payment_status', 
@@ -234,16 +234,6 @@ SELECT 'Rock Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Rock
 INSERT INTO sections (name)
 SELECT 'Cedar Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Cedar Street');
 
--- Insert default admin user if it doesn't exist
-INSERT INTO users (email, username, password_hash, role)
-SELECT 
-    'admin@rvpark.com',
-    'admin',
-    '$2a$10$BZx1uF/j9zK8zS1XyQG7p.7ninzdsH7.RQUTs/W7h3R9jM9QNCIeq',
-    'ADMIN'
-WHERE NOT EXISTS (
-    SELECT 1 FROM users WHERE email = 'admin@rvpark.com'
-);
 
 -- Create space initialization function if it doesn't exist
 CREATE OR REPLACE FUNCTION initialize_section_spaces(

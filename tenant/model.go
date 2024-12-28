@@ -3,6 +3,18 @@ package tenant
 
 import "time"
 
+const (
+	PaymentTypeMonthly = "Monthly"
+	PaymentTypeWeekly  = "Weekly"
+	PaymentTypeDaily   = "Daily"
+)
+
+const (
+	PaymentStatusPaid    = "Paid"
+	PaymentStatusDue     = "Due"
+	PaymentStatusOverdue = "Overdue"
+)
+
 type Tenant struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
@@ -17,6 +29,6 @@ type Payment struct {
 	Amount      float64    `json:"amount"`
 	DueDate     time.Time  `json:"dueDate"`
 	PaidDate    *time.Time `json:"paidDate,omitempty"`
-	PaymentType string     `json:"paymentType"` // "Monthly" or "Weekly"
-	Status      string     `json:"status"`      // "Paid", "Due", "Overdue"
+	PaymentType string     `json:"paymentType"` // PaymentTypeMonthly, PaymentTypeWeekly, PaymentTypeDaily
+	Status      string     `json:"status"`      // PaymentStatusPaid, PaymentStatusDue, PaymentStatusOverdue
 }
