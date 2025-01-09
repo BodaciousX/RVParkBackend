@@ -24,6 +24,12 @@ type RecordPaymentRequest struct {
 }
 
 func (s *Server) handleListTenants(w http.ResponseWriter, r *http.Request) {
+	// Method check example
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	tenants, err := s.tenantService.ListTenants()
 	if err != nil {
 		http.Error(w, "failed to fetch tenants", http.StatusInternalServerError)

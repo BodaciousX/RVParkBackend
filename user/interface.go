@@ -10,6 +10,7 @@ type Service interface {
 	Login(creds LoginCredentials) (*User, string, error)
 	ValidateToken(token string) (*User, error)
 	ChangePassword(userID string, oldPassword, newPassword string) error
+	RevokeAllTokens(userID string) error
 }
 
 type Repository interface {

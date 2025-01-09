@@ -9,14 +9,18 @@ import (
 	"github.com/BodaciousX/RVParkBackend/user"
 )
 
-var UserContextKey = contextKey("user")
+var UserContextKey = ContextKey("user")
 
-type contextKey string
+type ContextKey string
 
-const userContextKey contextKey = "user"
+const userContextKey ContextKey = "user"
 
 type AuthMiddleware struct {
 	userService user.Service
+}
+
+func (m *AuthMiddleware) RevokeUserTokens(userID string) error {
+	return m.userService.RevokeAllTokens(userID)
 }
 
 func NewAuthMiddleware(userService user.Service) *AuthMiddleware {

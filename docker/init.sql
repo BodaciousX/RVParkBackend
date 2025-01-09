@@ -19,7 +19,7 @@ SELECT create_enum_if_not_exists('user_role',
 
 SELECT create_enum_if_not_exists('space_status', 
     ARRAY['''Occupied (Paid)''', '''Occupied (Payment Due)''', '''Occupied (Overdue)''', 
-          '''Vacant''', '''Reserved''', '''N/A''']
+          '''Vacant''', '''Reserved''']
 );
 
 SELECT create_enum_if_not_exists('payment_type', 

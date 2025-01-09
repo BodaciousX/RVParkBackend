@@ -49,6 +49,13 @@ func NewServer(
 	s.Mux.Handle("/tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantList))))
 	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
 
+	// Logout routes
+	s.Mux.Handle("/logout", middleware.CORS(
+		authMiddleware.RequireAuth(
+			http.HandlerFunc(s.handleLogout),
+		),
+	))
+
 	return s
 }
 
@@ -128,4 +135,13 @@ func (s *Server) handleTenantOperations(w http.ResponseWriter, r *http.Request) 
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(middleware.UserContextKey).(*user.User)
+	if err := s.userService.RevokeAllTokens(user.ID); err != nil {
+		http.Error(w, "failed to logout", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }

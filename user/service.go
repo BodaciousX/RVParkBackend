@@ -153,3 +153,7 @@ func GenerateToken() (string, string, error) {
 
 	return token, tokenHash, nil
 }
+
+func (s *service) RevokeAllTokens(userID string) error {
+	return s.tokenRepo.RevokeAllUserTokens(userID)
+}
