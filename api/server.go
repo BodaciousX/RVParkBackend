@@ -2,6 +2,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/BodaciousX/RVParkBackend/middleware"
@@ -34,6 +35,7 @@ func NewServer(
 
 	// Public routes with CORS
 	s.Mux.Handle("/login", middleware.CORS(http.HandlerFunc(s.handleLogin)))
+	s.Mux.Handle("/validate-token", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleValidateToken))))
 
 	// Protected routes with auth and CORS
 	// User routes - Admin only
@@ -49,7 +51,7 @@ func NewServer(
 	s.Mux.Handle("/tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantList))))
 	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
 
-	// Logout routes
+	// Logout route
 	s.Mux.Handle("/logout", middleware.CORS(
 		authMiddleware.RequireAuth(
 			http.HandlerFunc(s.handleLogout),
@@ -57,6 +59,19 @@ func NewServer(
 	))
 
 	return s
+}
+
+// Add new handler for validate-token
+func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
+	// The user is already validated by the RequireAuth middleware
+	// Just return the user from the context
+	user := r.Context().Value(middleware.UserContextKey).(*user.User)
+
+	// Return user data
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user": user,
+	})
 }
 
 // Handler for all user-related operations that need path parsing
