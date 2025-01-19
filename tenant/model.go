@@ -18,7 +18,6 @@ const (
 type Tenant struct {
 	ID         string    `json:"id"`
 	Name       string    `json:"name"`
-	Phone      string    `json:"phone"`
 	MoveInDate time.Time `json:"moveInDate"`
 	SpaceID    string    `json:"spaceId"`
 }

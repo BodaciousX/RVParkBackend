@@ -26,7 +26,6 @@ func (r *sqlRepository) Create(tenant Tenant) error {
 		query,
 		tenant.ID,
 		tenant.Name,
-		tenant.Phone,
 		tenant.MoveInDate,
 		tenant.SpaceID,
 	)
@@ -49,7 +48,6 @@ func (r *sqlRepository) Get(id string) (*Tenant, error) {
 	err := r.db.QueryRow(query, id).Scan(
 		&tenant.ID,
 		&tenant.Name,
-		&tenant.Phone,
 		&tenant.MoveInDate,
 		&tenant.SpaceID,
 	)
@@ -73,7 +71,6 @@ func (r *sqlRepository) Update(tenant Tenant) error {
 		query,
 		tenant.ID,
 		tenant.Name,
-		tenant.Phone,
 		tenant.SpaceID,
 	)
 	return err
@@ -109,7 +106,6 @@ func (r *sqlRepository) List() ([]Tenant, error) {
 		err := rows.Scan(
 			&tenant.ID,
 			&tenant.Name,
-			&tenant.Phone,
 			&tenant.MoveInDate,
 			&tenant.SpaceID,
 		)

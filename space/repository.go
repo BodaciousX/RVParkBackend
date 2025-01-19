@@ -27,7 +27,10 @@ func (r *sqlRepository) List() ([]Space, error) {
 			s.past_due_amount
 		FROM spaces s
 		JOIN sections sec ON s.section_id = sec.id
-		ORDER BY sec.name, s.id
+		ORDER BY 
+			sec.name,
+			SUBSTRING(s.id FROM '^[A-Za-z]+'),
+			CAST(SUBSTRING(s.id FROM '[0-9]+') AS INTEGER)
 	`
 
 	rows, err := r.db.Query(query)
@@ -69,6 +72,10 @@ func (r *sqlRepository) List() ([]Space, error) {
 		}
 
 		spaces = append(spaces, space)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return spaces, nil

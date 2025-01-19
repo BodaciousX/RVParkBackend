@@ -52,7 +52,6 @@ func (s *Server) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 
 	newTenant := tenant.Tenant{
 		Name:       req.Name,
-		Phone:      req.Phone,
 		MoveInDate: req.MoveInDate,
 		SpaceID:    req.SpaceID,
 	}
