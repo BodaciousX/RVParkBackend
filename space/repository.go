@@ -133,16 +133,17 @@ func (r *sqlRepository) Get(id string) (*Space, error) {
 
 func (r *sqlRepository) Update(space Space) error {
 	query := `
-		UPDATE spaces SET
-			status = $2,
-			tenant_id = $3,
-			reserved = $4,
-			payment_type = $5,
-			next_payment = $6,
-			tenant_notified = $7,
-			past_due_amount = $8
-		WHERE id = $1
-	`
+        UPDATE spaces SET
+            status = $2,
+            tenant_id = $3,
+            reserved = $4,
+            payment_type = $5,
+            next_payment = $6,
+            tenant_notified = $7,
+            past_due_amount = $8,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+    `
 
 	var tenantID interface{}
 	if space.TenantID != nil {
@@ -154,13 +155,18 @@ func (r *sqlRepository) Update(space Space) error {
 		nextPayment = space.NextPayment
 	}
 
+	var paymentType interface{}
+	if space.PaymentType != "" {
+		paymentType = space.PaymentType
+	}
+
 	_, err := r.db.Exec(
 		query,
 		space.ID,
 		space.Status,
 		tenantID,
 		space.Reserved,
-		space.PaymentType,
+		paymentType,
 		nextPayment,
 		space.TenantNotified,
 		space.PastDueAmount,

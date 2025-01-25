@@ -98,16 +98,24 @@ func (s *Server) handleMoveIn(w http.ResponseWriter, r *http.Request) {
 
 	var req MoveInRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := s.spaceService.MoveIn(id, req.TenantID); err != nil {
-		http.Error(w, "failed to move in tenant", http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Get updated space to return
+	updatedSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedSpace)
 }
 
 func (s *Server) handleMoveOut(w http.ResponseWriter, r *http.Request) {

@@ -15,12 +15,12 @@ func NewSQLRepository(db *sql.DB) Repository {
 
 func (r *sqlRepository) Create(tenant Tenant) error {
 	query := `
-		INSERT INTO tenants (
-			id, name, phone, move_in_date, space_id
-		) VALUES (
-			$1, $2, $3, $4, $5
-		)
-	`
+        INSERT INTO tenants (
+            id, name, move_in_date, space_id
+        ) VALUES (
+            $1, $2, $3, $4
+        )
+    `
 
 	_, err := r.db.Exec(
 		query,
@@ -34,15 +34,14 @@ func (r *sqlRepository) Create(tenant Tenant) error {
 
 func (r *sqlRepository) Get(id string) (*Tenant, error) {
 	query := `
-		SELECT 
-			id,
-			name,
-			phone,
-			move_in_date,
-			space_id
-		FROM tenants
-		WHERE id = $1
-	`
+        SELECT 
+            id,
+            name,
+            move_in_date,
+            space_id
+        FROM tenants
+        WHERE id = $1
+    `
 
 	var tenant Tenant
 	err := r.db.QueryRow(query, id).Scan(
@@ -84,15 +83,14 @@ func (r *sqlRepository) Delete(id string) error {
 
 func (r *sqlRepository) List() ([]Tenant, error) {
 	query := `
-		SELECT 
-			id,
-			name,
-			phone,
-			move_in_date,
-			space_id
-		FROM tenants
-		ORDER BY name
-	`
+        SELECT 
+            id,
+            name,
+            move_in_date,
+            space_id
+        FROM tenants
+        ORDER BY name
+    `
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -113,10 +111,6 @@ func (r *sqlRepository) List() ([]Tenant, error) {
 			return nil, err
 		}
 		tenants = append(tenants, tenant)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
 	}
 
 	return tenants, nil

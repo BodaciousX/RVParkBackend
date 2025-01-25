@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/BodaciousX/RVParkBackend/tenant"
+	"github.com/google/uuid"
 )
 
 type CreateTenantRequest struct {
 	Name       string    `json:"name"`
-	Phone      string    `json:"phone"`
 	MoveInDate time.Time `json:"moveInDate"`
 	SpaceID    string    `json:"spaceId"`
 }
@@ -51,6 +51,7 @@ func (s *Server) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newTenant := tenant.Tenant{
+		ID:         uuid.New().String(),
 		Name:       req.Name,
 		MoveInDate: req.MoveInDate,
 		SpaceID:    req.SpaceID,

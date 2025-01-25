@@ -107,6 +107,7 @@ func (s *service) MoveIn(spaceID string, tenantID string) error {
 
 	space.TenantID = &tenantID
 	space.Status = "Occupied (Paid)"
+	space.Reserved = false
 	return s.repo.Update(*space)
 }
 
