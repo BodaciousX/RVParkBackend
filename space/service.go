@@ -2,6 +2,8 @@
 package space
 
 import (
+	"fmt"
+
 	"github.com/BodaciousX/RVParkBackend/tenant"
 )
 
@@ -107,4 +109,16 @@ func (s *service) MoveOut(spaceID string) error {
 	space.Status = "Vacant"
 	space.PaymentType = ""
 	return s.repo.Update(*space)
+}
+
+func (s *service) UpdateSpace(space Space) error {
+	// Validate status
+	switch space.Status {
+	case "Occupied (Paid)", "Occupied (Payment Due)", "Occupied (Overdue)", "Vacant", "Reserved":
+		// Valid status
+	default:
+		return fmt.Errorf("invalid status: %s", space.Status)
+	}
+
+	return s.repo.Update(space)
 }

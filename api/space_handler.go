@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/BodaciousX/RVParkBackend/space"
 )
 
 func (s *Server) handleListSpaces(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +18,45 @@ func (s *Server) handleListSpaces(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(spaces)
+}
+
+func (s *Server) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
+
+	var updateSpace space.Space
+	if err := json.NewDecoder(r.Body).Decode(&updateSpace); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Ensure the ID in the path matches the space
+	updateSpace.ID = id
+
+	// Get current space first
+	currentSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, "space not found", http.StatusNotFound)
+		return
+	}
+
+	// Preserve the section from the current space
+	updateSpace.Section = currentSpace.Section
+
+	// Update the space
+	if err := s.spaceService.UpdateSpace(updateSpace); err != nil {
+		http.Error(w, "failed to update space", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the updated space to return
+	updatedSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, "failed to get updated space", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedSpace)
 }
 
 func (s *Server) handleGetSpace(w http.ResponseWriter, r *http.Request) {

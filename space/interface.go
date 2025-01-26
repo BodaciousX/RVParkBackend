@@ -9,6 +9,7 @@ type Service interface {
 	UnreserveSpace(spaceID string) error
 	MoveIn(spaceID string, tenantID string) error
 	MoveOut(spaceID string) error
+	UpdateSpace(space Space) error
 }
 
 type Repository interface {
