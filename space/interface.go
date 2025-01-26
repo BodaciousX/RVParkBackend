@@ -4,8 +4,6 @@ package space
 type Service interface {
 	ListSpaces() (map[string][]Space, error)
 	GetSpace(id string) (*Space, error)
-	UpdateSpace(space Space) error
-	MarkTenantNotified(spaceID string) error
 	GetVacantSpaces() ([]Space, error)
 	ReserveSpace(spaceID string) error
 	UnreserveSpace(spaceID string) error

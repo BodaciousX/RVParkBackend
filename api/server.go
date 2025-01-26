@@ -94,8 +94,6 @@ func (s *Server) handleSpaceOperations(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == http.MethodGet:
 		s.handleGetSpace(w, r)
-	case r.Method == http.MethodPut:
-		s.handleUpdateSpace(w, r)
 	case r.Method == http.MethodPost && len(path) > 8:
 		switch {
 		case path[len(path)-8:] == "/reserve":

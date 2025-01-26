@@ -50,20 +50,6 @@ func (s *service) GetSpace(id string) (*Space, error) {
 	return space, nil
 }
 
-func (s *service) UpdateSpace(space Space) error {
-	return s.repo.Update(space)
-}
-
-func (s *service) MarkTenantNotified(spaceID string) error {
-	space, err := s.repo.Get(spaceID)
-	if err != nil {
-		return err
-	}
-
-	space.TenantNotified = true
-	return s.repo.Update(*space)
-}
-
 func (s *service) GetVacantSpaces() ([]Space, error) {
 	spaces, err := s.repo.List()
 	if err != nil {

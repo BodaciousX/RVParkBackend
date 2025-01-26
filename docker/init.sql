@@ -67,7 +67,6 @@ CREATE TABLE IF NOT EXISTS spaces (
     reserved BOOLEAN NOT NULL DEFAULT false,
     payment_type payment_type,
     next_payment TIMESTAMP WITH TIME ZONE,
-    tenant_notified BOOLEAN DEFAULT false,
     past_due_amount DECIMAL(10,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

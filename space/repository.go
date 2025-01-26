@@ -23,7 +23,6 @@ func (r *sqlRepository) List() ([]Space, error) {
 			s.reserved,
 			s.payment_type,
 			s.next_payment,
-			s.tenant_notified,
 			s.past_due_amount
 		FROM spaces s
 		JOIN sections sec ON s.section_id = sec.id
@@ -54,7 +53,6 @@ func (r *sqlRepository) List() ([]Space, error) {
 			&space.Reserved,
 			&paymentType,
 			&nextPayment,
-			&space.TenantNotified,
 			&space.PastDueAmount,
 		)
 		if err != nil {
@@ -91,7 +89,6 @@ func (r *sqlRepository) Get(id string) (*Space, error) {
 			s.reserved,
 			s.payment_type,
 			s.next_payment,
-			s.tenant_notified,
 			s.past_due_amount
 		FROM spaces s
 		JOIN sections sec ON s.section_id = sec.id
@@ -111,7 +108,6 @@ func (r *sqlRepository) Get(id string) (*Space, error) {
 		&space.Reserved,
 		&paymentType,
 		&nextPayment,
-		&space.TenantNotified,
 		&space.PastDueAmount,
 	)
 	if err != nil {
@@ -139,8 +135,7 @@ func (r *sqlRepository) Update(space Space) error {
             reserved = $4,
             payment_type = $5,
             next_payment = $6,
-            tenant_notified = $7,
-            past_due_amount = $8,
+            past_due_amount = $7,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
     `
@@ -168,7 +163,6 @@ func (r *sqlRepository) Update(space Space) error {
 		space.Reserved,
 		paymentType,
 		nextPayment,
-		space.TenantNotified,
 		space.PastDueAmount,
 	)
 	return err

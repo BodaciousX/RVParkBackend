@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-
-	"github.com/BodaciousX/RVParkBackend/space"
 )
 
 func (s *Server) handleListSpaces(w http.ResponseWriter, r *http.Request) {
@@ -31,26 +29,6 @@ func (s *Server) handleGetSpace(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(space)
-}
-
-func (s *Server) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
-
-	var updateSpace space.Space
-	if err := json.NewDecoder(r.Body).Decode(&updateSpace); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	updateSpace.ID = id
-
-	if err := s.spaceService.UpdateSpace(updateSpace); err != nil {
-		http.Error(w, "failed to update space", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(updateSpace)
 }
 
 func (s *Server) handleGetVacantSpaces(w http.ResponseWriter, r *http.Request) {
