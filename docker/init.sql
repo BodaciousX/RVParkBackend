@@ -89,11 +89,13 @@ CREATE TABLE IF NOT EXISTS payments (
     amount DECIMAL(10,2) NOT NULL,
     due_date TIMESTAMP WITH TIME ZONE NOT NULL,
     paid_date TIMESTAMP WITH TIME ZONE,
+    previous_payment_date TIMESTAMP WITH TIME ZONE,
     payment_type payment_type NOT NULL,
     status payment_status NOT NULL DEFAULT 'Due',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Create indexes if they don't exist
 DO $$ 

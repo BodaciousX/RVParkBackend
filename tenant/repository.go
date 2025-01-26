@@ -118,18 +118,19 @@ func (r *sqlRepository) List() ([]Tenant, error) {
 
 func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 	query := `
-		SELECT 
-			id,
-			tenant_id,
-			amount,
-			due_date,
-			paid_date,
-			payment_type,
-			status
-		FROM payments
-		WHERE tenant_id = $1
-		ORDER BY due_date DESC
-	`
+        SELECT 
+            id,
+            tenant_id,
+            amount,
+            due_date,
+            paid_date,
+            previous_payment_date,
+            payment_type,
+            status
+        FROM payments
+        WHERE tenant_id = $1
+        ORDER BY due_date DESC
+    `
 
 	rows, err := r.db.Query(query, tenantID)
 	if err != nil {
@@ -141,6 +142,7 @@ func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 	for rows.Next() {
 		var payment Payment
 		var paidDate sql.NullTime
+		var previousPaymentDate sql.NullTime
 
 		err := rows.Scan(
 			&payment.ID,
@@ -148,6 +150,7 @@ func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 			&payment.Amount,
 			&payment.DueDate,
 			&paidDate,
+			&previousPaymentDate,
 			&payment.PaymentType,
 			&payment.Status,
 		)
@@ -158,6 +161,9 @@ func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 		if paidDate.Valid {
 			payment.PaidDate = &paidDate.Time
 		}
+		if previousPaymentDate.Valid {
+			payment.PreviousPaymentDate = &previousPaymentDate.Time
+		}
 
 		payments = append(payments, payment)
 	}
@@ -167,18 +173,19 @@ func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
 
 func (r *sqlRepository) CreatePayment(payment Payment) error {
 	query := `
-		INSERT INTO payments (
-			id,
-			tenant_id,
-			amount,
-			due_date,
-			paid_date,
-			payment_type,
-			status
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7
-		)
-	`
+        INSERT INTO payments (
+            id,
+            tenant_id,
+            amount,
+            due_date,
+            paid_date,
+            previous_payment_date,
+            payment_type,
+            status
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8
+        )
+    `
 
 	_, err := r.db.Exec(
 		query,
@@ -187,6 +194,7 @@ func (r *sqlRepository) CreatePayment(payment Payment) error {
 		payment.Amount,
 		payment.DueDate,
 		payment.PaidDate,
+		payment.PreviousPaymentDate,
 		payment.PaymentType,
 		payment.Status,
 	)

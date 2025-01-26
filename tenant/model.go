@@ -23,11 +23,12 @@ type Tenant struct {
 }
 
 type Payment struct {
-	ID          string     `json:"id"`
-	TenantID    string     `json:"tenantId"`
-	Amount      float64    `json:"amount"`
-	DueDate     time.Time  `json:"dueDate"`
-	PaidDate    *time.Time `json:"paidDate,omitempty"`
-	PaymentType string     `json:"paymentType"` // PaymentTypeMonthly, PaymentTypeWeekly, PaymentTypeDaily
-	Status      string     `json:"status"`      // PaymentStatusPaid, PaymentStatusDue, PaymentStatusOverdue
+	ID                  string     `json:"id"`
+	TenantID            string     `json:"tenantId"`
+	Amount              float64    `json:"amount"`
+	DueDate             time.Time  `json:"dueDate"`
+	PaidDate            *time.Time `json:"paidDate,omitempty"`
+	PreviousPaymentDate *time.Time `json:"previousPaymentDate,omitempty"`
+	PaymentType         string     `json:"paymentType"` // PaymentTypeMonthly, PaymentTypeWeekly, PaymentTypeDaily
+	Status              string     `json:"status"`      // PaymentStatusPaid, PaymentStatusDue, PaymentStatusOverdue
 }
