@@ -1,3 +1,6 @@
+-- to access logs: psql "postgres://dbuser:dbpassword@localhost:5433/RVParkDB"
+-- to quit logs: \q
+
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

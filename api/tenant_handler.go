@@ -136,7 +136,9 @@ func (s *Server) handleRecordPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Create payment with generated UUID
 	payment := tenant.Payment{
+		ID:          uuid.New().String(), // Generate new UUID for payment
 		TenantID:    tenantID,
 		Amount:      req.Amount,
 		DueDate:     req.DueDate,
