@@ -1,4 +1,4 @@
-// space/service.go contains the implementation of the Service interface.
+// space/service.go
 package space
 
 import (
@@ -39,16 +39,6 @@ func (s *service) GetSpace(id string) (*Space, error) {
 		return nil, err
 	}
 
-	// If space has tenant, get payment status
-	if space.TenantID != nil {
-		status, pastDue, err := s.tenantService.GetPaymentStatus(*space.TenantID)
-		if err != nil {
-			return nil, err
-		}
-		space.Status = "Occupied (" + status + ")"
-		space.PastDueAmount = pastDue
-	}
-
 	return space, nil
 }
 
@@ -73,7 +63,13 @@ func (s *service) ReserveSpace(spaceID string) error {
 		return err
 	}
 
+	// Can only reserve vacant spaces
+	if space.Status != StatusVacant {
+		return fmt.Errorf("space %s is not vacant", spaceID)
+	}
+
 	space.Reserved = true
+	space.Status = StatusReserved
 	return s.repo.Update(*space)
 }
 
@@ -83,7 +79,13 @@ func (s *service) UnreserveSpace(spaceID string) error {
 		return err
 	}
 
+	// Can only unreserve reserved spaces
+	if space.Status != StatusReserved {
+		return fmt.Errorf("space %s is not reserved", spaceID)
+	}
+
 	space.Reserved = false
+	space.Status = StatusVacant
 	return s.repo.Update(*space)
 }
 
@@ -93,9 +95,15 @@ func (s *service) MoveIn(spaceID string, tenantID string) error {
 		return err
 	}
 
+	// Can only move in to vacant or reserved spaces
+	if space.Status != StatusVacant && space.Status != StatusReserved {
+		return fmt.Errorf("space %s is not available", spaceID)
+	}
+
 	space.TenantID = &tenantID
-	space.Status = "Occupied (Paid)"
+	space.Status = StatusOccupied
 	space.Reserved = false
+
 	return s.repo.Update(*space)
 }
 
@@ -105,19 +113,38 @@ func (s *service) MoveOut(spaceID string) error {
 		return err
 	}
 
+	// Can only move out from occupied spaces
+	if space.Status != StatusOccupied {
+		return fmt.Errorf("space %s is not occupied", spaceID)
+	}
+
 	space.TenantID = nil
-	space.Status = "Vacant"
-	space.PaymentType = ""
+	space.Status = StatusVacant
+	space.Reserved = false
+
 	return s.repo.Update(*space)
 }
 
 func (s *service) UpdateSpace(space Space) error {
 	// Validate status
 	switch space.Status {
-	case "Occupied (Paid)", "Occupied (Payment Due)", "Occupied (Overdue)", "Vacant", "Reserved":
+	case StatusOccupied, StatusVacant, StatusReserved:
 		// Valid status
 	default:
 		return fmt.Errorf("invalid status: %s", space.Status)
+	}
+
+	// Validate state consistency
+	if space.Reserved && space.Status != StatusReserved {
+		return fmt.Errorf("reserved spaces must have Reserved status")
+	}
+
+	if space.TenantID != nil && space.Status != StatusOccupied {
+		return fmt.Errorf("spaces with tenants must have Occupied status")
+	}
+
+	if space.Status == StatusOccupied && space.TenantID == nil {
+		return fmt.Errorf("occupied spaces must have a tenant")
 	}
 
 	return s.repo.Update(space)

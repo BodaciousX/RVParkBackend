@@ -1,4 +1,4 @@
-// space/repository.go contains the repository interface for the space package.
+// space/repository.go
 package space
 
 import (
@@ -15,22 +15,19 @@ func NewSQLRepository(db *sql.DB) Repository {
 
 func (r *sqlRepository) List() ([]Space, error) {
 	query := `
-		SELECT 
-			s.id,
-			sec.name as section,
-			s.status,
-			s.tenant_id,
-			s.reserved,
-			s.payment_type,
-			s.next_payment,
-			s.past_due_amount
-		FROM spaces s
-		JOIN sections sec ON s.section_id = sec.id
-		ORDER BY 
-			sec.name,
-			SUBSTRING(s.id FROM '^[A-Za-z]+'),
-			CAST(SUBSTRING(s.id FROM '[0-9]+') AS INTEGER)
-	`
+        SELECT 
+            s.id,
+            sec.name as section,
+            s.status,
+            s.tenant_id,
+            s.reserved
+        FROM spaces s
+        JOIN sections sec ON s.section_id = sec.id
+        ORDER BY 
+            sec.name,
+            SUBSTRING(s.id FROM '^[A-Za-z]+'),
+            CAST(SUBSTRING(s.id FROM '[0-9]+') AS INTEGER)
+    `
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -42,8 +39,6 @@ func (r *sqlRepository) List() ([]Space, error) {
 	for rows.Next() {
 		var space Space
 		var tenantID sql.NullString
-		var paymentType sql.NullString
-		var nextPayment sql.NullTime
 
 		err := rows.Scan(
 			&space.ID,
@@ -51,9 +46,6 @@ func (r *sqlRepository) List() ([]Space, error) {
 			&space.Status,
 			&tenantID,
 			&space.Reserved,
-			&paymentType,
-			&nextPayment,
-			&space.PastDueAmount,
 		)
 		if err != nil {
 			return nil, err
@@ -61,12 +53,6 @@ func (r *sqlRepository) List() ([]Space, error) {
 
 		if tenantID.Valid {
 			space.TenantID = &tenantID.String
-		}
-		if paymentType.Valid {
-			space.PaymentType = paymentType.String
-		}
-		if nextPayment.Valid {
-			space.NextPayment = nextPayment.Time
 		}
 
 		spaces = append(spaces, space)
@@ -81,24 +67,19 @@ func (r *sqlRepository) List() ([]Space, error) {
 
 func (r *sqlRepository) Get(id string) (*Space, error) {
 	query := `
-		SELECT 
-			s.id,
-			sec.name as section,
-			s.status,
-			s.tenant_id,
-			s.reserved,
-			s.payment_type,
-			s.next_payment,
-			s.past_due_amount
-		FROM spaces s
-		JOIN sections sec ON s.section_id = sec.id
-		WHERE s.id = $1
-	`
+        SELECT 
+            s.id,
+            sec.name as section,
+            s.status,
+            s.tenant_id,
+            s.reserved
+        FROM spaces s
+        JOIN sections sec ON s.section_id = sec.id
+        WHERE s.id = $1
+    `
 
 	var space Space
 	var tenantID sql.NullString
-	var paymentType sql.NullString
-	var nextPayment sql.NullTime
 
 	err := r.db.QueryRow(query, id).Scan(
 		&space.ID,
@@ -106,9 +87,6 @@ func (r *sqlRepository) Get(id string) (*Space, error) {
 		&space.Status,
 		&tenantID,
 		&space.Reserved,
-		&paymentType,
-		&nextPayment,
-		&space.PastDueAmount,
 	)
 	if err != nil {
 		return nil, err
@@ -116,12 +94,6 @@ func (r *sqlRepository) Get(id string) (*Space, error) {
 
 	if tenantID.Valid {
 		space.TenantID = &tenantID.String
-	}
-	if paymentType.Valid {
-		space.PaymentType = paymentType.String
-	}
-	if nextPayment.Valid {
-		space.NextPayment = nextPayment.Time
 	}
 
 	return &space, nil
@@ -133,9 +105,6 @@ func (r *sqlRepository) Update(space Space) error {
             status = $2,
             tenant_id = $3,
             reserved = $4,
-            payment_type = $5,
-            next_payment = $6,
-            past_due_amount = $7,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
     `
@@ -145,25 +114,12 @@ func (r *sqlRepository) Update(space Space) error {
 		tenantID = *space.TenantID
 	}
 
-	var nextPayment interface{}
-	if !space.NextPayment.IsZero() {
-		nextPayment = space.NextPayment
-	}
-
-	var paymentType interface{}
-	if space.PaymentType != "" {
-		paymentType = space.PaymentType
-	}
-
 	_, err := r.db.Exec(
 		query,
 		space.ID,
 		space.Status,
 		tenantID,
 		space.Reserved,
-		paymentType,
-		nextPayment,
-		space.PastDueAmount,
 	)
 	return err
 }

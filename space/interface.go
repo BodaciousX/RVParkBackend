@@ -1,4 +1,4 @@
-// space/interface.go contains the interface for the space package.
+// space/interface.go
 package space
 
 type Service interface {

@@ -1,8 +1,9 @@
-// tenant/repository.go contains the repository interface for the tenant package.
+// tenant/repository.go
 package tenant
 
 import (
 	"database/sql"
+	"time"
 )
 
 type sqlRepository struct {
@@ -16,18 +17,21 @@ func NewSQLRepository(db *sql.DB) Repository {
 func (r *sqlRepository) Create(tenant Tenant) error {
 	query := `
         INSERT INTO tenants (
-            id, name, move_in_date, space_id
+            id, name, move_in_date, space_id, created_at, updated_at
         ) VALUES (
-            $1, $2, $3, $4
+            $1, $2, $3, $4, $5, $6
         )
     `
 
+	now := time.Now()
 	_, err := r.db.Exec(
 		query,
 		tenant.ID,
 		tenant.Name,
 		tenant.MoveInDate,
 		tenant.SpaceID,
+		now,
+		now,
 	)
 	return err
 }
@@ -38,7 +42,9 @@ func (r *sqlRepository) Get(id string) (*Tenant, error) {
             id,
             name,
             move_in_date,
-            space_id
+            space_id,
+            created_at,
+            updated_at
         FROM tenants
         WHERE id = $1
     `
@@ -49,6 +55,37 @@ func (r *sqlRepository) Get(id string) (*Tenant, error) {
 		&tenant.Name,
 		&tenant.MoveInDate,
 		&tenant.SpaceID,
+		&tenant.CreatedAt,
+		&tenant.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &tenant, nil
+}
+
+func (r *sqlRepository) GetBySpace(spaceID string) (*Tenant, error) {
+	query := `
+        SELECT 
+            id,
+            name,
+            move_in_date,
+            space_id,
+            created_at,
+            updated_at
+        FROM tenants
+        WHERE space_id = $1
+    `
+
+	var tenant Tenant
+	err := r.db.QueryRow(query, spaceID).Scan(
+		&tenant.ID,
+		&tenant.Name,
+		&tenant.MoveInDate,
+		&tenant.SpaceID,
+		&tenant.CreatedAt,
+		&tenant.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -59,12 +96,12 @@ func (r *sqlRepository) Get(id string) (*Tenant, error) {
 
 func (r *sqlRepository) Update(tenant Tenant) error {
 	query := `
-		UPDATE tenants SET
-			name = $2,
-			phone = $3,
-			space_id = $4
-		WHERE id = $1
-	`
+        UPDATE tenants SET
+            name = $2,
+            space_id = $3,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+    `
 
 	_, err := r.db.Exec(
 		query,
@@ -87,7 +124,9 @@ func (r *sqlRepository) List() ([]Tenant, error) {
             id,
             name,
             move_in_date,
-            space_id
+            space_id,
+            created_at,
+            updated_at
         FROM tenants
         ORDER BY name
     `
@@ -106,6 +145,8 @@ func (r *sqlRepository) List() ([]Tenant, error) {
 			&tenant.Name,
 			&tenant.MoveInDate,
 			&tenant.SpaceID,
+			&tenant.CreatedAt,
+			&tenant.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -113,109 +154,9 @@ func (r *sqlRepository) List() ([]Tenant, error) {
 		tenants = append(tenants, tenant)
 	}
 
-	return tenants, nil
-}
-
-func (r *sqlRepository) ListPayments(tenantID string) ([]Payment, error) {
-	query := `
-        SELECT 
-            id,
-            tenant_id,
-            amount,
-            due_date,
-            paid_date,
-            previous_payment_date,
-            payment_type,
-            status
-        FROM payments
-        WHERE tenant_id = $1
-        ORDER BY due_date DESC
-    `
-
-	rows, err := r.db.Query(query, tenantID)
-	if err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var payments []Payment
-	for rows.Next() {
-		var payment Payment
-		var paidDate sql.NullTime
-		var previousPaymentDate sql.NullTime
-
-		err := rows.Scan(
-			&payment.ID,
-			&payment.TenantID,
-			&payment.Amount,
-			&payment.DueDate,
-			&paidDate,
-			&previousPaymentDate,
-			&payment.PaymentType,
-			&payment.Status,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if paidDate.Valid {
-			payment.PaidDate = &paidDate.Time
-		}
-		if previousPaymentDate.Valid {
-			payment.PreviousPaymentDate = &previousPaymentDate.Time
-		}
-
-		payments = append(payments, payment)
-	}
-
-	return payments, nil
-}
-
-func (r *sqlRepository) CreatePayment(payment Payment) error {
-	query := `
-        INSERT INTO payments (
-            id,
-            tenant_id,
-            amount,
-            due_date,
-            paid_date,
-            previous_payment_date,
-            payment_type,
-            status
-        ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8
-        )
-    `
-
-	_, err := r.db.Exec(
-		query,
-		payment.ID,
-		payment.TenantID,
-		payment.Amount,
-		payment.DueDate,
-		payment.PaidDate,
-		payment.PreviousPaymentDate,
-		payment.PaymentType,
-		payment.Status,
-	)
-	return err
-}
-
-func (r *sqlRepository) UpdatePayment(payment Payment) error {
-	query := `
-		UPDATE payments SET
-			amount = $2,
-			paid_date = $3,
-			status = $4
-		WHERE id = $1
-	`
-
-	_, err := r.db.Exec(
-		query,
-		payment.ID,
-		payment.Amount,
-		payment.PaidDate,
-		payment.Status,
-	)
-	return err
+	return tenants, nil
 }

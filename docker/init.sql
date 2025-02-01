@@ -21,16 +21,7 @@ SELECT create_enum_if_not_exists('user_role',
 );
 
 SELECT create_enum_if_not_exists('space_status', 
-    ARRAY['''Occupied (Paid)''', '''Occupied (Payment Due)''', '''Occupied (Overdue)''', 
-          '''Vacant''', '''Reserved''']
-);
-
-SELECT create_enum_if_not_exists('payment_type', 
-    ARRAY['''Monthly''', '''Weekly''', '''Daily''']
-);
-
-SELECT create_enum_if_not_exists('payment_status', 
-    ARRAY['''Paid''', '''Due''', '''Overdue''']
+    ARRAY['''Occupied''', '''Vacant''', '''Reserved''']
 );
 
 -- Create tokens table if it doesn't exist
@@ -68,9 +59,6 @@ CREATE TABLE IF NOT EXISTS spaces (
     status space_status NOT NULL DEFAULT 'Vacant',
     tenant_id UUID,
     reserved BOOLEAN NOT NULL DEFAULT false,
-    payment_type payment_type,
-    next_payment TIMESTAMP WITH TIME ZONE,
-    past_due_amount DECIMAL(10,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -85,24 +73,23 @@ CREATE TABLE IF NOT EXISTS tenants (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create payments table if it doesn't exist
+-- Create simplified payments table
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
-    amount DECIMAL(10,2) NOT NULL,
+    amount_due DECIMAL(10,2) NOT NULL,
     due_date TIMESTAMP WITH TIME ZONE NOT NULL,
     paid_date TIMESTAMP WITH TIME ZONE,
-    previous_payment_date TIMESTAMP WITH TIME ZONE,
-    payment_type payment_type NOT NULL,
-    status payment_status NOT NULL DEFAULT 'Due',
+    next_payment_date TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT amount_positive CHECK (amount_due > 0)
 );
-
 
 -- Create indexes if they don't exist
 DO $$ 
 BEGIN
+    -- Token indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tokens_user_id') THEN
         CREATE INDEX idx_tokens_user_id ON tokens(user_id);
     END IF;
@@ -111,6 +98,7 @@ BEGIN
         CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
     END IF;
     
+    -- Space indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_spaces_section_id') THEN
         CREATE INDEX idx_spaces_section_id ON spaces(section_id);
     END IF;
@@ -119,20 +107,22 @@ BEGIN
         CREATE INDEX idx_spaces_tenant_id ON spaces(tenant_id);
     END IF;
     
+    -- Tenant indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tenants_space_id') THEN
         CREATE INDEX idx_tenants_space_id ON tenants(space_id);
     END IF;
-    
+
+    -- Payment indexes
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_tenant_id') THEN
         CREATE INDEX idx_payments_tenant_id ON payments(tenant_id);
     END IF;
-    
+
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_due_date') THEN
         CREATE INDEX idx_payments_due_date ON payments(due_date);
     END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_status') THEN
-        CREATE INDEX idx_payments_status ON payments(status);
+
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_next_payment_date') THEN
+        CREATE INDEX idx_payments_next_payment_date ON payments(next_payment_date);
     END IF;
 END $$;
 
@@ -236,7 +226,6 @@ SELECT 'Rock Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Rock
 
 INSERT INTO sections (name)
 SELECT 'Cedar Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Cedar Street');
-
 
 -- Create space initialization function if it doesn't exist
 CREATE OR REPLACE FUNCTION initialize_section_spaces(
