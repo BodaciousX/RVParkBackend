@@ -73,7 +73,10 @@ func (s *service) DeletePayment(id string) error {
 }
 
 func (s *service) GetTenantPayments(tenantID string) ([]Payment, error) {
-	return s.repo.ListByTenant(tenantID)
+	// Get a date range for the last 6 months
+	end := time.Now()
+	start := end.AddDate(0, -6, 0)
+	return s.repo.ListByDateRangeAndTenant(start, end, tenantID)
 }
 
 func (s *service) GetPaymentsByDateRange(start, end time.Time) ([]Payment, error) {

@@ -114,33 +114,7 @@ func (r *sqlRepository) ListByTenant(tenantID string) ([]Payment, error) {
 	}
 	defer rows.Close()
 
-	var payments []Payment
-	for rows.Next() {
-		var payment Payment
-		var paidDate sql.NullTime
-
-		err := rows.Scan(
-			&payment.ID,
-			&payment.TenantID,
-			&payment.AmountDue,
-			&payment.DueDate,
-			&paidDate,
-			&payment.NextPaymentDate,
-			&payment.CreatedAt,
-			&payment.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		if paidDate.Valid {
-			payment.PaidDate = &paidDate.Time
-		}
-
-		payments = append(payments, payment)
-	}
-
-	return payments, rows.Err()
+	return r.scanPayments(rows)
 }
 
 func (r *sqlRepository) ListByDateRange(start, end time.Time) ([]Payment, error) {
@@ -159,33 +133,26 @@ func (r *sqlRepository) ListByDateRange(start, end time.Time) ([]Payment, error)
 	}
 	defer rows.Close()
 
-	var payments []Payment
-	for rows.Next() {
-		var payment Payment
-		var paidDate sql.NullTime
+	return r.scanPayments(rows)
+}
 
-		err := rows.Scan(
-			&payment.ID,
-			&payment.TenantID,
-			&payment.AmountDue,
-			&payment.DueDate,
-			&paidDate,
-			&payment.NextPaymentDate,
-			&payment.CreatedAt,
-			&payment.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
+func (r *sqlRepository) ListByDateRangeAndTenant(start, end time.Time, tenantID string) ([]Payment, error) {
+	query := `
+        SELECT 
+            id, tenant_id, amount_due, due_date, paid_date,
+            next_payment_date, created_at, updated_at
+        FROM payments
+        WHERE due_date BETWEEN $1 AND $2 AND tenant_id = $3
+        ORDER BY due_date DESC
+    `
 
-		if paidDate.Valid {
-			payment.PaidDate = &paidDate.Time
-		}
-
-		payments = append(payments, payment)
+	rows, err := r.db.Query(query, start, end, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	defer rows.Close()
 
-	return payments, rows.Err()
+	return r.scanPayments(rows)
 }
 
 func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
@@ -222,4 +189,34 @@ func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
 	}
 
 	return &payment, nil
+}
+
+func (r *sqlRepository) scanPayments(rows *sql.Rows) ([]Payment, error) {
+	var payments []Payment
+	for rows.Next() {
+		var payment Payment
+		var paidDate sql.NullTime
+
+		err := rows.Scan(
+			&payment.ID,
+			&payment.TenantID,
+			&payment.AmountDue,
+			&payment.DueDate,
+			&paidDate,
+			&payment.NextPaymentDate,
+			&payment.CreatedAt,
+			&payment.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if paidDate.Valid {
+			payment.PaidDate = &paidDate.Time
+		}
+
+		payments = append(payments, payment)
+	}
+
+	return payments, rows.Err()
 }
