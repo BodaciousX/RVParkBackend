@@ -3,6 +3,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -22,43 +24,73 @@ func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
 	// Extract start and end dates from query parameters
 	startStr := r.URL.Query().Get("start")
 	endStr := r.URL.Query().Get("end")
+	tenantID := r.URL.Query().Get("tenant")
 
-	var payments []payment.Payment
-	var err error
-
-	if startStr != "" && endStr != "" {
-		start, err := time.Parse(time.RFC3339, startStr)
-		if err != nil {
-			http.Error(w, "invalid start date format", http.StatusBadRequest)
-			return
-		}
-
-		end, err := time.Parse(time.RFC3339, endStr)
-		if err != nil {
-			http.Error(w, "invalid end date format", http.StatusBadRequest)
-			return
-		}
-
-		payments, err = s.paymentService.GetPaymentsByDateRange(start, end)
-	} else {
-		// If no date range provided, return an error as we want to enforce date range filtering
+	if startStr == "" || endStr == "" {
 		http.Error(w, "start and end dates are required", http.StatusBadRequest)
 		return
 	}
 
+	start, err := time.Parse(time.RFC3339, startStr)
 	if err != nil {
-		http.Error(w, "failed to fetch payments", http.StatusInternalServerError)
+		http.Error(w, "invalid start date format", http.StatusBadRequest)
+		return
+	}
+
+	end, err := time.Parse(time.RFC3339, endStr)
+	if err != nil {
+		http.Error(w, "invalid end date format", http.StatusBadRequest)
+		return
+	}
+
+	var payments []payment.Payment
+	if tenantID != "" {
+		// If tenant ID is provided, get payments for specific tenant
+		payments, err = s.paymentService.GetTenantPayments(tenantID)
+	} else {
+		// Otherwise get all payments in date range
+		payments, err = s.paymentService.GetPaymentsByDateRange(start, end)
+	}
+
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to fetch payments: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(payments)
+	if err := json.NewEncoder(w).Encode(payments); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	var req CreatePaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if req.TenantID == "" {
+		http.Error(w, "tenant ID is required", http.StatusBadRequest)
+		return
+	}
+	if req.AmountDue <= 0 {
+		http.Error(w, "amount due must be greater than 0", http.StatusBadRequest)
+		return
+	}
+	if req.DueDate.IsZero() {
+		http.Error(w, "due date is required", http.StatusBadRequest)
+		return
+	}
+	if req.NextPaymentDate.IsZero() {
+		http.Error(w, "next payment date is required", http.StatusBadRequest)
 		return
 	}
 
@@ -73,13 +105,16 @@ func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.paymentService.CreatePayment(newPayment); err != nil {
-		http.Error(w, "failed to create payment: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to create payment: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newPayment)
+	if err := json.NewEncoder(w).Encode(newPayment); err != nil {
+		// Log the error but don't return it to the client since we already sent the status code
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 func (s *Server) handleGetPayment(w http.ResponseWriter, r *http.Request) {

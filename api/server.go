@@ -56,7 +56,16 @@ func NewServer(
 	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
 
 	// Payment routes
-	s.Mux.Handle("/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handlePaymentList))))
+	s.Mux.Handle("/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			s.handlePaymentList(w, r)
+		case http.MethodPost:
+			s.handleCreatePayment(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))))
 	s.Mux.Handle("/payments/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handlePaymentOperations))))
 
 	// Logout route
