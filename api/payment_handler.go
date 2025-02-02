@@ -12,9 +12,10 @@ import (
 )
 
 type CreatePaymentRequest struct {
-	TenantID string    `json:"tenantId"`
-	Amount   float64   `json:"amount"`
-	DueDate  time.Time `json:"dueDate"`
+	TenantID        string    `json:"tenantId"`
+	AmountDue       float64   `json:"amountDue"`
+	DueDate         time.Time `json:"dueDate"`
+	NextPaymentDate time.Time `json:"nextPaymentDate"`
 }
 
 func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
@@ -57,21 +58,22 @@ func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
 	var req CreatePaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	newPayment := payment.Payment{
-		ID:        uuid.New().String(),
-		TenantID:  req.TenantID,
-		AmountDue: req.Amount,
-		DueDate:   req.DueDate,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:              uuid.New().String(),
+		TenantID:        req.TenantID,
+		AmountDue:       req.AmountDue,
+		DueDate:         req.DueDate,
+		NextPaymentDate: req.NextPaymentDate,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	if err := s.paymentService.CreatePayment(newPayment); err != nil {
-		http.Error(w, "failed to create payment", http.StatusInternalServerError)
+		http.Error(w, "failed to create payment: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
