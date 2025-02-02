@@ -1,4 +1,4 @@
-// tenant/interface.go
+// tenant/t_interface.go
 package tenant
 
 type Service interface {

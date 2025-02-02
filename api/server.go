@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/BodaciousX/RVParkBackend/middleware"
+	"github.com/BodaciousX/RVParkBackend/payment"
 	"github.com/BodaciousX/RVParkBackend/space"
 	"github.com/BodaciousX/RVParkBackend/tenant"
 	"github.com/BodaciousX/RVParkBackend/user"
@@ -16,6 +17,7 @@ type Server struct {
 	userService    user.Service
 	tenantService  tenant.Service
 	spaceService   space.Service
+	paymentService payment.Service
 	authMiddleware *middleware.AuthMiddleware
 }
 
@@ -23,6 +25,7 @@ func NewServer(
 	userService user.Service,
 	tenantService tenant.Service,
 	spaceService space.Service,
+	paymentService payment.Service,
 	authMiddleware *middleware.AuthMiddleware,
 ) *Server {
 	s := &Server{
@@ -30,6 +33,7 @@ func NewServer(
 		userService:    userService,
 		tenantService:  tenantService,
 		spaceService:   spaceService,
+		paymentService: paymentService,
 		authMiddleware: authMiddleware,
 	}
 
@@ -51,6 +55,10 @@ func NewServer(
 	s.Mux.Handle("/tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantList))))
 	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
 
+	// Payment routes
+	s.Mux.Handle("/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handlePaymentList))))
+	s.Mux.Handle("/payments/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handlePaymentOperations))))
+
 	// Logout route
 	s.Mux.Handle("/logout", middleware.CORS(
 		authMiddleware.RequireAuth(
@@ -61,20 +69,15 @@ func NewServer(
 	return s
 }
 
-// Add new handler for validate-token
 func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
-	// The user is already validated by the RequireAuth middleware
-	// Just return the user from the context
 	user := r.Context().Value(middleware.UserContextKey).(*user.User)
 
-	// Return user data
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": user,
 	})
 }
 
-// Handler for all user-related operations that need path parsing
 func (s *Server) handleUserOperations(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -88,7 +91,6 @@ func (s *Server) handleUserOperations(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handler for all space-related operations that need path parsing
 func (s *Server) handleSpaceOperations(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
 	switch {
@@ -114,7 +116,6 @@ func (s *Server) handleSpaceOperations(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handler for tenant list operations
 func (s *Server) handleTenantList(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -126,27 +127,18 @@ func (s *Server) handleTenantList(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Handler for all tenant-related operations that need path parsing
 func (s *Server) handleTenantOperations(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	switch {
-	case r.Method == http.MethodGet:
-		if len(path) > 16 && path[len(path)-9:] == "/payments" {
-			s.handleGetTenantPayments(w, r)
-		} else {
-			s.handleGetTenant(w, r)
-		}
-	case r.Method == http.MethodPut:
+	switch r.Method {
+	case http.MethodGet:
+		s.handleGetTenant(w, r)
+	case http.MethodPut:
 		s.handleUpdateTenant(w, r)
-	case r.Method == http.MethodDelete:
-		// Check if user is admin for delete operation
+	case http.MethodDelete:
 		if user, ok := r.Context().Value(middleware.UserContextKey).(*user.User); !ok || user.Role != "ADMIN" {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 		s.handleDeleteTenant(w, r)
-	case r.Method == http.MethodPost && len(path) > 9 && path[len(path)-9:] == "/payments":
-		s.handleRecordPayment(w, r)
 	default:
 		http.NotFound(w, r)
 	}

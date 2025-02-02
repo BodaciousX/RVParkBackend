@@ -1,4 +1,4 @@
-// space/repository.go
+// space/s_repository.go
 package space
 
 import (

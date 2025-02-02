@@ -1,3 +1,4 @@
+// user/u_token.go contains the implementation of the user token.
 package user
 
 import (

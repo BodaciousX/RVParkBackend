@@ -10,6 +10,7 @@ import (
 
 	"github.com/BodaciousX/RVParkBackend/api"
 	"github.com/BodaciousX/RVParkBackend/middleware"
+	"github.com/BodaciousX/RVParkBackend/payment"
 	"github.com/BodaciousX/RVParkBackend/space"
 	"github.com/BodaciousX/RVParkBackend/tenant"
 	"github.com/BodaciousX/RVParkBackend/user"
@@ -148,11 +149,13 @@ func main() {
 	tokenRepo := user.NewTokenRepository(db)
 	tenantRepo := tenant.NewSQLRepository(db)
 	spaceRepo := space.NewSQLRepository(db)
+	paymentRepo := payment.NewSQLRepository(db)
 
 	// Initialize services
 	userService := user.NewService(userRepo, tokenRepo)
 	tenantService := tenant.NewService(tenantRepo)
 	spaceService := space.NewService(spaceRepo, tenantService)
+	paymentService := payment.NewService(paymentRepo)
 
 	// Ensure admin exists with known credentials
 	if err := ensureAdminExists(userService); err != nil {
@@ -162,8 +165,14 @@ func main() {
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(userService)
 
-	// Initialize server
-	server := api.NewServer(userService, tenantService, spaceService, authMiddleware)
+	// Initialize server with all services including payment
+	server := api.NewServer(
+		userService,
+		tenantService,
+		spaceService,
+		paymentService,
+		authMiddleware,
+	)
 
 	port := os.Getenv("PORT")
 	if port == "" {

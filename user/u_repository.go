@@ -1,4 +1,4 @@
-// user/repository.go contains the repository interface for the user package.
+// user/u_repository.go contains the repository interface for the user package.
 package user
 
 import (

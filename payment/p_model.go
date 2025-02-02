@@ -1,4 +1,4 @@
-// payment/model.go
+// payment/p_model.go
 package payment
 
 import "time"

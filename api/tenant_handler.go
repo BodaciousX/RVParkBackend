@@ -17,12 +17,6 @@ type CreateTenantRequest struct {
 	SpaceID    string    `json:"spaceId"`
 }
 
-type RecordPaymentRequest struct {
-	Amount      float64   `json:"amount"`
-	DueDate     time.Time `json:"dueDate"`
-	PaymentType string    `json:"paymentType"`
-}
-
 func (s *Server) handleListTenants(w http.ResponseWriter, r *http.Request) {
 	// Method check example
 	if r.Method != http.MethodGet {
@@ -110,48 +104,4 @@ func (s *Server) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *Server) handleGetTenantPayments(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/tenants/")
-	tenantID := strings.TrimSuffix(path, "/payments")
-
-	payments, err := s.tenantService.GetTenantPayments(tenantID)
-	if err != nil {
-		http.Error(w, "failed to get tenant payments", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(payments)
-}
-
-func (s *Server) handleRecordPayment(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimPrefix(r.URL.Path, "/tenants/")
-	tenantID := strings.TrimSuffix(path, "/payments")
-
-	var req RecordPaymentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Create payment with generated UUID
-	payment := tenant.Payment{
-		ID:          uuid.New().String(), // Generate new UUID for payment
-		TenantID:    tenantID,
-		Amount:      req.Amount,
-		DueDate:     req.DueDate,
-		PaymentType: req.PaymentType,
-		Status:      "Paid", // Status will be set to Paid as this is a payment record
-	}
-
-	if err := s.tenantService.RecordPayment(payment); err != nil {
-		http.Error(w, "failed to record payment", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(payment)
 }

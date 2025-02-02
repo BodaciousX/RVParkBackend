@@ -1,4 +1,4 @@
-// space/service.go
+// space/s_service.go
 package space
 
 import (

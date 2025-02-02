@@ -1,4 +1,4 @@
-// space/interface.go
+// space/s_interface.go
 package space
 
 type Service interface {
