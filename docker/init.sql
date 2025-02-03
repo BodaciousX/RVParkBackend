@@ -28,8 +28,8 @@ SELECT create_enum_if_not_exists('space_status',
 CREATE TABLE IF NOT EXISTS tokens (
     token_hash TEXT PRIMARY KEY,
     user_id UUID NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
     revoked BOOLEAN DEFAULT false,
     CONSTRAINT token_expiry_valid CHECK (expires_at > created_at)
 );
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) NOT NULL,
     password_hash TEXT NOT NULL,
     role user_role NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_login TIMESTAMP,
     CONSTRAINT email_valid CHECK (email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
 );
 
@@ -59,18 +59,18 @@ CREATE TABLE IF NOT EXISTS spaces (
     status space_status NOT NULL DEFAULT 'Vacant',
     tenant_id UUID,
     reserved BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP
 );
 
 -- Create tenants table if it doesn't exist
 CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
-    move_in_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    move_in_date TIMESTAMP NOT NULL,
     space_id VARCHAR(20),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP
 );
 
 -- Create simplified payments table
@@ -78,11 +78,11 @@ CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
     amount_due DECIMAL(10,2) NOT NULL,
-    due_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    paid_date TIMESTAMP WITH TIME ZONE,
-    next_payment_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    due_date TIMESTAMP NOT NULL,
+    paid_date TIMESTAMP,
+    next_payment_date TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
     CONSTRAINT amount_positive CHECK (amount_due > 0)
 );
 
@@ -130,7 +130,7 @@ END $$;
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.updated_at = LOCALTIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
