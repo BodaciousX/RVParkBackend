@@ -18,6 +18,7 @@ type CreatePaymentRequest struct {
 	AmountDue       float64   `json:"amountDue"`
 	DueDate         time.Time `json:"dueDate"`
 	NextPaymentDate time.Time `json:"nextPaymentDate"`
+	PaidDate        time.Time `json:"paidDate"`
 }
 
 func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +100,7 @@ func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
 		TenantID:        req.TenantID,
 		AmountDue:       req.AmountDue,
 		DueDate:         req.DueDate,
+		PaidDate:        &req.PaidDate,
 		NextPaymentDate: req.NextPaymentDate,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
