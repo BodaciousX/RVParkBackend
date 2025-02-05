@@ -67,6 +67,57 @@ func checkRequiredTables(db *sql.DB) error {
 	return nil
 }
 
+func ensureStaffExists(userService user.Service) error {
+	// Get staff credentials from environment variables or use defaults
+	staffEmail := os.Getenv("STAFF_EMAIL")
+	if staffEmail == "" {
+		staffEmail = "staff@rvpark.com"
+	}
+
+	staffPassword := os.Getenv("STAFF_PASSWORD")
+	if staffPassword == "" {
+		// Generate a random password if not provided
+		staffPassword = fmt.Sprintf("staff%d", time.Now().Unix())
+	}
+
+	// Check if staff exists by trying to get by email
+	_, err := userService.GetUserByEmail(staffEmail)
+	if err == nil {
+		// Staff exists, just log the credentials
+		log.Println("----------------------------------------")
+		log.Println("Existing staff account found:")
+		log.Printf("Email: %s\n", staffEmail)
+		log.Printf("Password: %s\n", staffPassword)
+		log.Println("Please save these credentials securely!")
+		log.Println("----------------------------------------")
+		return nil
+	}
+
+	// Create new staff user
+	staffUser := user.User{
+		ID:        uuid.New().String(),
+		Email:     staffEmail,
+		Username:  "staff",
+		Role:      user.RoleStaff,
+		CreatedAt: time.Now(),
+	}
+
+	err = userService.CreateUser(staffUser, staffPassword)
+	if err != nil {
+		return fmt.Errorf("failed to create staff user: %v", err)
+	}
+
+	// Print the credentials
+	log.Println("----------------------------------------")
+	log.Println("New staff account created successfully:")
+	log.Printf("Email: %s\n", staffEmail)
+	log.Printf("Password: %s\n", staffPassword)
+	log.Println("Please save these credentials securely!")
+	log.Println("----------------------------------------")
+
+	return nil
+}
+
 func ensureAdminExists(userService user.Service) error {
 	// Get admin credentials from environment variables or use defaults
 	adminEmail := os.Getenv("ADMIN_EMAIL")
@@ -157,9 +208,13 @@ func main() {
 	spaceService := space.NewService(spaceRepo, tenantService)
 	paymentService := payment.NewService(paymentRepo)
 
-	// Ensure admin exists with known credentials
+	// Ensure admin and staff users exist with known credentials
 	if err := ensureAdminExists(userService); err != nil {
 		log.Fatalf("Failed to ensure admin exists: %v", err)
+	}
+
+	if err := ensureStaffExists(userService); err != nil {
+		log.Fatalf("Failed to ensure staff exists: %v", err)
 	}
 
 	// Initialize auth middleware
