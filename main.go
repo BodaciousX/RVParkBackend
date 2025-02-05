@@ -18,6 +18,26 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// initializeDatabase reads and executes the init.sql file
+func initializeDatabase(db *sql.DB) error {
+	log.Println("Starting database initialization...")
+
+	// Read init.sql file
+	initSQL, err := os.ReadFile("init.sql")
+	if err != nil {
+		return fmt.Errorf("failed to read init.sql: %v", err)
+	}
+
+	// Execute the SQL statements
+	_, err = db.Exec(string(initSQL))
+	if err != nil {
+		return fmt.Errorf("failed to execute init.sql: %v", err)
+	}
+
+	log.Println("Database initialization completed successfully")
+	return nil
+}
+
 // checkDatabaseConnection attempts to connect to the database with retries
 func checkDatabaseConnection(db *sql.DB) error {
 	maxRetries := 30
@@ -189,6 +209,13 @@ func main() {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
+	// Initialize database schema
+	log.Println("Initializing database schema...")
+	if err := initializeDatabase(db); err != nil {
+		log.Printf("Warning: Database initialization failed: %v", err)
+		// Continue execution as tables might already exist
+	}
+
 	// Verify required tables exist
 	log.Println("Verifying database tables...")
 	if err := checkRequiredTables(db); err != nil {
@@ -235,7 +262,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf(":%s", port)
-	log.Printf("Database checks completed successfully")
+	log.Printf("Database initialization and checks completed successfully")
 	log.Printf("Server running on http://localhost%s\n", addr)
 
 	log.Fatal(http.ListenAndServe(addr, server.Mux))
