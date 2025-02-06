@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env*
+README.md
+rvpark_data/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
