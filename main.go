@@ -194,6 +194,9 @@ func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "postgres://dbuser:dbpassword@localhost:5433/RVParkDB?sslmode=disable"
+	} else {
+		// For Railway: Enable SSL mode if DATABASE_URL is provided
+		dbURL += "?sslmode=require"
 	}
 
 	// Open database connection
