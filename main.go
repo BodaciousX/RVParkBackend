@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/BodaciousX/RVParkBackend/api"
@@ -193,11 +194,18 @@ func main() {
 	// Database connection
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
+		// Local development fallback
 		dbURL = "postgres://dbuser:dbpassword@localhost:5433/RVParkDB?sslmode=disable"
-	} else {
-		// For Railway: Enable SSL mode if DATABASE_URL is provided
-		dbURL += "?sslmode=require"
+	} else if !strings.Contains(dbURL, "sslmode=") {
+		// For Railway: Add SSL mode if not already in URL
+		if strings.Contains(dbURL, "?") {
+			dbURL += "&sslmode=require"
+		} else {
+			dbURL += "?sslmode=require"
+		}
 	}
+
+	log.Printf("Attempting to connect to database...")
 
 	// Open database connection
 	db, err := sql.Open("postgres", dbURL)
@@ -205,6 +213,11 @@ func main() {
 		log.Fatalf("Failed to open database connection: %v", err)
 	}
 	defer db.Close()
+
+	// Set connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
 
 	// Check database connection with retries
 	log.Println("Checking database connection...")
