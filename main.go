@@ -89,7 +89,7 @@ func checkRequiredTables(db *sql.DB) error {
 }
 
 func ensureStaffExists(userService user.Service) error {
-	// Get staff credentials from environment variables or use defaults
+	// Get staff credentials from environment variables
 	staffEmail := os.Getenv("STAFF_EMAIL")
 	if staffEmail == "" {
 		staffEmail = "staff@rvpark.com"
@@ -97,20 +97,13 @@ func ensureStaffExists(userService user.Service) error {
 
 	staffPassword := os.Getenv("STAFF_PASSWORD")
 	if staffPassword == "" {
-		// Generate a random password if not provided
 		staffPassword = fmt.Sprintf("staff%d", time.Now().Unix())
 	}
 
-	// Check if staff exists by trying to get by email
+	// Check if staff exists
 	_, err := userService.GetUserByEmail(staffEmail)
 	if err == nil {
-		// Staff exists, just log the credentials
-		log.Println("----------------------------------------")
-		log.Println("Existing staff account found:")
-		log.Printf("Email: %s\n", staffEmail)
-		log.Printf("Password: %s\n", staffPassword)
-		log.Println("Please save these credentials securely!")
-		log.Println("----------------------------------------")
+		log.Printf("Existing staff account found with email: %s\n", staffEmail)
 		return nil
 	}
 
@@ -128,19 +121,12 @@ func ensureStaffExists(userService user.Service) error {
 		return fmt.Errorf("failed to create staff user: %v", err)
 	}
 
-	// Print the credentials
-	log.Println("----------------------------------------")
-	log.Println("New staff account created successfully:")
-	log.Printf("Email: %s\n", staffEmail)
-	log.Printf("Password: %s\n", staffPassword)
-	log.Println("Please save these credentials securely!")
-	log.Println("----------------------------------------")
-
+	log.Printf("New staff account created with email: %s\n", staffEmail)
 	return nil
 }
 
 func ensureAdminExists(userService user.Service) error {
-	// Get admin credentials from environment variables or use defaults
+	// Get admin credentials from environment variables
 	adminEmail := os.Getenv("ADMIN_EMAIL")
 	if adminEmail == "" {
 		adminEmail = "admin@rvpark.com"
@@ -148,20 +134,13 @@ func ensureAdminExists(userService user.Service) error {
 
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 	if adminPassword == "" {
-		// Generate a random password if not provided
 		adminPassword = fmt.Sprintf("admin%d", time.Now().Unix())
 	}
 
-	// Check if admin exists by trying to get by email
+	// Check if admin exists
 	_, err := userService.GetUserByEmail(adminEmail)
 	if err == nil {
-		// Admin exists, just log the credentials
-		log.Println("----------------------------------------")
-		log.Println("Existing admin account found:")
-		log.Printf("Email: %s\n", adminEmail)
-		log.Printf("Password: %s\n", adminPassword)
-		log.Println("Please save these credentials securely!")
-		log.Println("----------------------------------------")
+		log.Printf("Existing admin account found with email: %s\n", adminEmail)
 		return nil
 	}
 
@@ -179,25 +158,19 @@ func ensureAdminExists(userService user.Service) error {
 		return fmt.Errorf("failed to create admin user: %v", err)
 	}
 
-	// Print the credentials
-	log.Println("----------------------------------------")
-	log.Println("New admin account created successfully:")
-	log.Printf("Email: %s\n", adminEmail)
-	log.Printf("Password: %s\n", adminPassword)
-	log.Println("Please save these credentials securely!")
-	log.Println("----------------------------------------")
-
+	log.Printf("New admin account created with email: %s\n", adminEmail)
 	return nil
 }
 
 func main() {
-	// Database connection
+	// Get DATABASE_URL from environment
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		// Local development fallback
-		dbURL = "postgres://dbuser:dbpassword@localhost:5433/RVParkDB?sslmode=disable"
-	} else if !strings.Contains(dbURL, "sslmode=") {
-		// For Railway: Add SSL mode if not already in URL
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
+
+	// Always use SSL for Railway deployment
+	if !strings.Contains(dbURL, "sslmode=") {
 		if strings.Contains(dbURL, "?") {
 			dbURL += "&sslmode=require"
 		} else {
@@ -251,7 +224,7 @@ func main() {
 	spaceService := space.NewService(spaceRepo, tenantService)
 	paymentService := payment.NewService(paymentRepo)
 
-	// Ensure admin and staff users exist with known credentials
+	// Ensure admin and staff users exist
 	if err := ensureAdminExists(userService); err != nil {
 		log.Fatalf("Failed to ensure admin exists: %v", err)
 	}
@@ -263,7 +236,7 @@ func main() {
 	// Initialize auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(userService)
 
-	// Initialize server with all services including payment
+	// Initialize server with all services
 	server := api.NewServer(
 		userService,
 		tenantService,
@@ -272,6 +245,7 @@ func main() {
 		authMiddleware,
 	)
 
+	// Get port from environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -279,7 +253,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%s", port)
 	log.Printf("Database initialization and checks completed successfully")
-	log.Printf("Server running on http://localhost%s\n", addr)
+	log.Printf("Server running on port %s\n", port)
 
 	log.Fatal(http.ListenAndServe(addr, server.Mux))
 }
