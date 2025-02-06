@@ -8,12 +8,13 @@ COPY go.mod go.sum ./
 # Download all dependencies
 RUN go mod download
 
-# Copy the source code and initialization script
+# Copy the source code
 COPY . .
-COPY init.sql /app/init.sql
 
-# Make sure init.sql is accessible
-RUN chmod 644 /app/init.sql
+# Make sure init.sql is in the right place and accessible
+RUN mkdir -p /app/docker
+COPY docker/init.sql /app/docker/init.sql
+RUN chmod 644 /app/docker/init.sql
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .

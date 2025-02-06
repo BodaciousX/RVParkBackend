@@ -22,8 +22,8 @@ import (
 func initializeDatabase(db *sql.DB) error {
 	log.Println("Starting database initialization...")
 
-	// Read init.sql file
-	initSQL, err := os.ReadFile("init.sql")
+	// Read init.sql file from docker folder
+	initSQL, err := os.ReadFile("docker/init.sql")
 	if err != nil {
 		return fmt.Errorf("failed to read init.sql: %v", err)
 	}
