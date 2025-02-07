@@ -245,16 +245,23 @@ func main() {
 		authMiddleware,
 	)
 
-	// Get port from environment variable
+	// Get port from environment variable and ensure it's not empty
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+		log.Println("Warning: PORT environment variable not set, using default port 8080")
+	} else {
+		log.Printf("Using PORT from environment: %s", port)
 	}
 
-	// Explicitly bind to all interfaces (0.0.0.0)
+	// Create server address with explicit 0.0.0.0 binding
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
-	log.Printf("Database initialization and checks completed successfully")
-	log.Printf("Server running on %s\n", addr)
 
-	log.Fatal(http.ListenAndServe(addr, server.Mux))
+	log.Printf("Database initialization and checks completed successfully")
+	log.Printf("Server starting on %s", addr)
+
+	// Start the server
+	if err := http.ListenAndServe(addr, server.Mux); err != nil {
+		log.Fatalf("Server failed to start: %v", err)
+	}
 }
