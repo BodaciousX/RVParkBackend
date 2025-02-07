@@ -251,9 +251,10 @@ func main() {
 		port = "8080"
 	}
 
-	addr := fmt.Sprintf(":%s", port)
+	// Explicitly bind to all interfaces (0.0.0.0)
+	addr := fmt.Sprintf("0.0.0.0:%s", port)
 	log.Printf("Database initialization and checks completed successfully")
-	log.Printf("Server running on port %s\n", port)
+	log.Printf("Server running on %s\n", addr)
 
 	log.Fatal(http.ListenAndServe(addr, server.Mux))
 }
