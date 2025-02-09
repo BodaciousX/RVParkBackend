@@ -143,10 +143,6 @@ func (s *Server) handleTenantOperations(w http.ResponseWriter, r *http.Request) 
 	case http.MethodPut:
 		s.handleUpdateTenant(w, r)
 	case http.MethodDelete:
-		if user, ok := r.Context().Value(middleware.UserContextKey).(*user.User); !ok || user.Role != "ADMIN" {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
 		s.handleDeleteTenant(w, r)
 	default:
 		http.NotFound(w, r)
