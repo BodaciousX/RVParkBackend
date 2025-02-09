@@ -4,13 +4,26 @@ package middleware
 import (
 	"net/http"
 	"os"
+	"strings"
 )
 
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowedOrigin := os.Getenv("CORS_ORIGIN")
-		if allowedOrigin == "" {
-			allowedOrigin = "http://localhost:3000" // fallback
+		allowedOrigins := strings.Split(os.Getenv("CORS_ORIGIN"), ",")
+		origin := r.Header.Get("Origin")
+
+		// Check if the request origin is in the allowed origins
+		allowedOrigin := ""
+		for _, allowed := range allowedOrigins {
+			if allowed == origin || allowed == "*" {
+				allowedOrigin = origin
+				break
+			}
+		}
+
+		// If no match found and no origins configured, use development default
+		if allowedOrigin == "" && len(allowedOrigins) == 0 {
+			allowedOrigin = "http://localhost:3000"
 		}
 
 		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)

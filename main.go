@@ -19,6 +19,27 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// getDBConfig returns the database connection string with appropriate SSL settings
+func getDBConfig() string {
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
+
+	// Always use SSL in production (Render requirement)
+	if os.Getenv("GO_ENV") != "development" {
+		if !strings.Contains(dbURL, "sslmode=") {
+			if strings.Contains(dbURL, "?") {
+				dbURL += "&sslmode=require"
+			} else {
+				dbURL += "?sslmode=require"
+			}
+		}
+	}
+
+	return dbURL
+}
+
 // initializeDatabase reads and executes the init.sql file
 func initializeDatabase(db *sql.DB) error {
 	log.Println("Starting database initialization...")
@@ -98,6 +119,7 @@ func ensureStaffExists(userService user.Service) error {
 	staffPassword := os.Getenv("STAFF_PASSWORD")
 	if staffPassword == "" {
 		staffPassword = fmt.Sprintf("staff%d", time.Now().Unix())
+		log.Printf("WARNING: Generated random staff password: %s", staffPassword)
 	}
 
 	// Check if staff exists
@@ -135,6 +157,7 @@ func ensureAdminExists(userService user.Service) error {
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
 	if adminPassword == "" {
 		adminPassword = fmt.Sprintf("admin%d", time.Now().Unix())
+		log.Printf("WARNING: Generated random admin password: %s", adminPassword)
 	}
 
 	// Check if admin exists
@@ -163,24 +186,11 @@ func ensureAdminExists(userService user.Service) error {
 }
 
 func main() {
-	// Get DATABASE_URL from environment
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL environment variable is required")
-	}
-
-	// Always use SSL for Railway deployment
-	if !strings.Contains(dbURL, "sslmode=") {
-		if strings.Contains(dbURL, "?") {
-			dbURL += "&sslmode=require"
-		} else {
-			dbURL += "?sslmode=require"
-		}
-	}
-
+	// Get database configuration
+	dbURL := getDBConfig()
 	log.Printf("Attempting to connect to database...")
 
-	// Open database connection
+	// Open database connection with adjusted settings for cloud environment
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Failed to open database connection: %v", err)
@@ -188,7 +198,7 @@ func main() {
 	defer db.Close()
 
 	// Set connection pool settings
-	db.SetMaxOpenConns(25)
+	db.SetMaxOpenConns(25) // Render's free tier limit
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
@@ -245,13 +255,11 @@ func main() {
 		authMiddleware,
 	)
 
-	// Get PORT from environment variable, ensuring proper Railway configuration
+	// Get PORT from environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 		log.Printf("PORT environment variable not set - using default port %s", port)
-	} else {
-		log.Printf("Using Railway-provided PORT: %s", port)
 	}
 
 	// Listen on all interfaces
