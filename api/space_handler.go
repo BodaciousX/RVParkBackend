@@ -1,12 +1,12 @@
-// space_handler.go contains the HTTP handlers for the space API.
+// api/space_handler.go contains the HTTP handlers for the space API.
 package api
 
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/BodaciousX/RVParkBackend/space"
+	"github.com/gorilla/mux"
 )
 
 func (s *Server) handleListSpaces(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +21,9 @@ func (s *Server) handleListSpaces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var updateSpace space.Space
 	if err := json.NewDecoder(r.Body).Decode(&updateSpace); err != nil {
@@ -60,7 +62,9 @@ func (s *Server) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetSpace(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	space, err := s.spaceService.GetSpace(id)
 	if err != nil {
@@ -84,8 +88,9 @@ func (s *Server) handleGetVacantSpaces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleReserveSpace(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
-	id = strings.TrimSuffix(id, "/reserve")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.spaceService.ReserveSpace(id); err != nil {
 		http.Error(w, "failed to reserve space", http.StatusInternalServerError)
@@ -96,8 +101,9 @@ func (s *Server) handleReserveSpace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUnreserveSpace(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
-	id = strings.TrimSuffix(id, "/unreserve")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.spaceService.UnreserveSpace(id); err != nil {
 		http.Error(w, "failed to unreserve space", http.StatusInternalServerError)
@@ -112,8 +118,9 @@ type MoveInRequest struct {
 }
 
 func (s *Server) handleMoveIn(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
-	id = strings.TrimSuffix(id, "/move-in")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var req MoveInRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -138,8 +145,9 @@ func (s *Server) handleMoveIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleMoveOut(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/spaces/")
-	id = strings.TrimSuffix(id, "/move-out")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.spaceService.MoveOut(id); err != nil {
 		http.Error(w, "failed to move out tenant", http.StatusInternalServerError)

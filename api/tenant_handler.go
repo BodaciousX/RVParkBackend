@@ -4,11 +4,11 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/BodaciousX/RVParkBackend/tenant"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 type CreateTenantRequest struct {
@@ -18,12 +18,6 @@ type CreateTenantRequest struct {
 }
 
 func (s *Server) handleListTenants(w http.ResponseWriter, r *http.Request) {
-	// Method check example
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	tenants, err := s.tenantService.ListTenants()
 	if err != nil {
 		http.Error(w, "failed to fetch tenants", http.StatusInternalServerError)
@@ -62,7 +56,9 @@ func (s *Server) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetTenant(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/tenants/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	tenant, err := s.tenantService.GetTenant(id)
 	if err != nil {
@@ -75,7 +71,9 @@ func (s *Server) handleGetTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/tenants/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var updateTenant tenant.Tenant
 	if err := json.NewDecoder(r.Body).Decode(&updateTenant); err != nil {
@@ -96,7 +94,9 @@ func (s *Server) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/tenants/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.tenantService.DeleteTenant(id); err != nil {
 		http.Error(w, "failed to delete tenant", http.StatusInternalServerError)

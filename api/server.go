@@ -10,10 +10,11 @@ import (
 	"github.com/BodaciousX/RVParkBackend/space"
 	"github.com/BodaciousX/RVParkBackend/tenant"
 	"github.com/BodaciousX/RVParkBackend/user"
+	"github.com/gorilla/mux"
 )
 
 type Server struct {
-	Mux            *http.ServeMux
+	Router         *mux.Router
 	userService    user.Service
 	tenantService  tenant.Service
 	spaceService   space.Service
@@ -29,7 +30,7 @@ func NewServer(
 	authMiddleware *middleware.AuthMiddleware,
 ) *Server {
 	s := &Server{
-		Mux:            http.NewServeMux(),
+		Router:         mux.NewRouter(),
 		userService:    userService,
 		tenantService:  tenantService,
 		spaceService:   spaceService,
@@ -37,43 +38,55 @@ func NewServer(
 		authMiddleware: authMiddleware,
 	}
 
-	// Public routes with CORS
-	s.Mux.Handle("/login", middleware.CORS(http.HandlerFunc(s.handleLogin)))
-	s.Mux.Handle("/validate-token", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleValidateToken))))
+	// Apply CORS middleware to all routes
+	s.Router.Use(middleware.CORSMiddleware)
 
-	// Protected routes with auth and CORS
+	// Public routes
+	s.Router.HandleFunc("/login", s.handleLogin).Methods("POST")
+	s.Router.Handle("/validate-token", authMiddleware.RequireAuth(http.HandlerFunc(s.handleValidateToken))).Methods("GET")
+
 	// User routes
-	s.Mux.Handle("/users", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListUsers))))
-	s.Mux.Handle("/users/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleUserOperations))))
+	users := s.Router.PathPrefix("/users").Subrouter()
+	users.Use(authMiddleware.RequireAuth)
+	users.HandleFunc("", s.handleListUsers).Methods("GET")
+	users.HandleFunc("", s.handleCreateUser).Methods("POST")
+	users.HandleFunc("/{id}", s.handleGetUser).Methods("GET")
+	users.HandleFunc("/{id}", s.handleUpdateUser).Methods("PUT")
+	users.HandleFunc("/{id}", s.handleDeleteUser).Methods("DELETE")
 
 	// Space routes
-	s.Mux.Handle("/spaces", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListSpaces))))
-	s.Mux.Handle("/spaces/vacant", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleGetVacantSpaces))))
-	s.Mux.Handle("/spaces/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleSpaceOperations))))
+	spaces := s.Router.PathPrefix("/spaces").Subrouter()
+	spaces.Use(authMiddleware.RequireAuth)
+	spaces.HandleFunc("", s.handleListSpaces).Methods("GET")
+	spaces.HandleFunc("/vacant", s.handleGetVacantSpaces).Methods("GET")
+	spaces.HandleFunc("/{id}", s.handleGetSpace).Methods("GET")
+	spaces.HandleFunc("/{id}", s.handleUpdateSpace).Methods("PUT")
+	spaces.HandleFunc("/{id}/reserve", s.handleReserveSpace).Methods("POST")
+	spaces.HandleFunc("/{id}/unreserve", s.handleUnreserveSpace).Methods("POST")
+	spaces.HandleFunc("/{id}/move-in", s.handleMoveIn).Methods("POST")
+	spaces.HandleFunc("/{id}/move-out", s.handleMoveOut).Methods("POST")
 
 	// Tenant routes
-	s.Mux.Handle("/tenants", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantList))))
-	s.Mux.Handle("/tenants/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleTenantOperations))))
+	tenants := s.Router.PathPrefix("/tenants").Subrouter()
+	tenants.Use(authMiddleware.RequireAuth)
+	tenants.HandleFunc("", s.handleListTenants).Methods("GET")
+	tenants.HandleFunc("", s.handleCreateTenant).Methods("POST")
+	tenants.HandleFunc("/{id}", s.handleGetTenant).Methods("GET")
+	tenants.HandleFunc("/{id}", s.handleUpdateTenant).Methods("PUT")
+	tenants.HandleFunc("/{id}", s.handleDeleteTenant).Methods("DELETE")
 
-	// Payment routes with new record payment endpoint
-	s.Mux.Handle("/payments", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			s.handlePaymentList(w, r)
-		case http.MethodPost:
-			s.handleCreatePayment(w, r)
-		default:
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))))
-	s.Mux.Handle("/payments/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handlePaymentOperations))))
+	// Payment routes
+	payments := s.Router.PathPrefix("/payments").Subrouter()
+	payments.Use(authMiddleware.RequireAuth)
+	payments.HandleFunc("", s.handlePaymentList).Methods("GET")
+	payments.HandleFunc("", s.handleCreatePayment).Methods("POST")
+	payments.HandleFunc("/{id}", s.handleGetPayment).Methods("GET")
+	payments.HandleFunc("/{id}", s.handleUpdatePayment).Methods("PUT")
+	payments.HandleFunc("/{id}", s.handleDeletePayment).Methods("DELETE")
+	payments.HandleFunc("/{id}/record", s.handleRecordPayment).Methods("POST")
 
 	// Logout route
-	s.Mux.Handle("/logout", middleware.CORS(
-		authMiddleware.RequireAuth(
-			http.HandlerFunc(s.handleLogout),
-		),
-	))
+	s.Router.Handle("/logout", authMiddleware.RequireAuth(http.HandlerFunc(s.handleLogout))).Methods("POST")
 
 	return s
 }
@@ -87,68 +100,6 @@ func (s *Server) handleValidateToken(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) handleUserOperations(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetUser(w, r)
-	case http.MethodPut:
-		s.handleUpdateUser(w, r)
-	case http.MethodDelete:
-		s.handleDeleteUser(w, r)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func (s *Server) handleSpaceOperations(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	switch {
-	case r.Method == http.MethodGet:
-		s.handleGetSpace(w, r)
-	case r.Method == http.MethodPut:
-		s.handleUpdateSpace(w, r)
-	case r.Method == http.MethodPost && len(path) > 8:
-		switch {
-		case path[len(path)-8:] == "/reserve":
-			s.handleReserveSpace(w, r)
-		case path[len(path)-10:] == "/unreserve":
-			s.handleUnreserveSpace(w, r)
-		case path[len(path)-8:] == "/move-in":
-			s.handleMoveIn(w, r)
-		case path[len(path)-9:] == "/move-out":
-			s.handleMoveOut(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func (s *Server) handleTenantList(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleListTenants(w, r)
-	case http.MethodPost:
-		s.handleCreateTenant(w, r)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
-func (s *Server) handleTenantOperations(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetTenant(w, r)
-	case http.MethodPut:
-		s.handleUpdateTenant(w, r)
-	case http.MethodDelete:
-		s.handleDeleteTenant(w, r)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(middleware.UserContextKey).(*user.User)
 	if err := s.userService.RevokeAllTokens(user.ID); err != nil {
@@ -156,4 +107,9 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+// ServeHTTP makes the server struct satisfy http.Handler interface
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.Router.ServeHTTP(w, r)
 }

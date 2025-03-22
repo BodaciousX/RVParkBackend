@@ -4,10 +4,10 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/BodaciousX/RVParkBackend/user"
+	"github.com/gorilla/mux"
 )
 
 type LoginRequest struct {
@@ -82,7 +82,9 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/users/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	user, err := s.userService.GetUser(id)
 	if err != nil {
@@ -95,7 +97,9 @@ func (s *Server) handleGetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/users/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var updateUser user.User
 	if err := json.NewDecoder(r.Body).Decode(&updateUser); err != nil {
@@ -114,7 +118,9 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/users/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.userService.DeleteUser(id); err != nil {
 		http.Error(w, "failed to delete user", http.StatusInternalServerError)

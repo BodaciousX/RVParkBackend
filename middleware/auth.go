@@ -9,11 +9,9 @@ import (
 	"github.com/BodaciousX/RVParkBackend/user"
 )
 
-var UserContextKey = ContextKey("user")
-
 type ContextKey string
 
-const userContextKey ContextKey = "user"
+const UserContextKey ContextKey = "user"
 
 type AuthMiddleware struct {
 	userService user.Service
@@ -29,6 +27,7 @@ func NewAuthMiddleware(userService user.Service) *AuthMiddleware {
 	}
 }
 
+// RequireAuth middleware ensures that requests have a valid authentication token
 func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Get token from Authorization header
@@ -53,7 +52,7 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 		}
 
 		// Add user to request context
-		ctx := context.WithValue(r.Context(), userContextKey, user)
+		ctx := context.WithValue(r.Context(), UserContextKey, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

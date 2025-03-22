@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/BodaciousX/RVParkBackend/payment"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 type CreatePaymentRequest struct {
@@ -72,11 +72,6 @@ func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
 	var req CreatePaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
@@ -132,7 +127,9 @@ func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetPayment(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/payments/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	payment, err := s.paymentService.GetPayment(id)
 	if err != nil {
@@ -145,7 +142,9 @@ func (s *Server) handleGetPayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleUpdatePayment(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/payments/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var updatePayment payment.Payment
 	if err := json.NewDecoder(r.Body).Decode(&updatePayment); err != nil {
@@ -164,7 +163,9 @@ func (s *Server) handleUpdatePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeletePayment(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/payments/")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	if err := s.paymentService.DeletePayment(id); err != nil {
 		http.Error(w, "failed to delete payment", http.StatusInternalServerError)
@@ -175,8 +176,9 @@ func (s *Server) handleDeletePayment(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRecordPayment(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/payments/")
-	id = strings.TrimSuffix(id, "/record")
+	// Extract id from URL path parameters
+	vars := mux.Vars(r)
+	id := vars["id"]
 
 	var req RecordPaymentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -198,23 +200,4 @@ func (s *Server) handleRecordPayment(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(updatedPayment)
-}
-
-func (s *Server) handlePaymentOperations(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	if strings.HasSuffix(path, "/record") && r.Method == http.MethodPost {
-		s.handleRecordPayment(w, r)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		s.handleGetPayment(w, r)
-	case http.MethodPut:
-		s.handleUpdatePayment(w, r)
-	case http.MethodDelete:
-		s.handleDeletePayment(w, r)
-	default:
-		http.NotFound(w, r)
-	}
 }

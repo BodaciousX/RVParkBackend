@@ -224,8 +224,8 @@ func main() {
 	log.Printf("Database initialization and checks completed successfully")
 	log.Printf("Server starting on port %s", port)
 
-	// Start the server
-	if err := http.ListenAndServe(addr, server.Mux); err != nil {
+	// Start the server using the Server struct's ServeHTTP method
+	if err := http.ListenAndServe(addr, server); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }

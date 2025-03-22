@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func CORS(next http.Handler) http.Handler {
+// CORSMiddleware handles Cross-Origin Resource Sharing (CORS) headers
+func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		allowedOrigins := strings.Split(os.Getenv("CORS_ORIGIN"), ",")
 		origin := r.Header.Get("Origin")
