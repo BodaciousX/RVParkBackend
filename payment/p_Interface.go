@@ -11,6 +11,7 @@ type Service interface {
 	GetTenantPayments(tenantID string) ([]Payment, error)
 	GetPaymentsByDateRange(start, end time.Time) ([]Payment, error)
 	GetLatestPayment(tenantID string) (*Payment, error)
+	RecordPayment(paymentID string, method PaymentMethod) error
 }
 
 type Repository interface {

@@ -28,6 +28,13 @@ func (s *service) CreatePayment(payment Payment) error {
 		return fmt.Errorf("due date is required")
 	}
 
+	// Validate payment method if provided
+	if payment.PaymentMethod != nil {
+		if err := s.validatePaymentMethod(*payment.PaymentMethod); err != nil {
+			return err
+		}
+	}
+
 	// Generate new ID if not provided
 	if payment.ID == "" {
 		payment.ID = uuid.New().String()
@@ -60,6 +67,13 @@ func (s *service) UpdatePayment(payment Payment) error {
 		return fmt.Errorf("due date is required")
 	}
 
+	// Validate payment method if provided
+	if payment.PaymentMethod != nil {
+		if err := s.validatePaymentMethod(*payment.PaymentMethod); err != nil {
+			return err
+		}
+	}
+
 	// Preserve original IDs and timestamps
 	payment.TenantID = existing.TenantID
 	payment.CreatedAt = existing.CreatedAt
@@ -85,4 +99,34 @@ func (s *service) GetPaymentsByDateRange(start, end time.Time) ([]Payment, error
 
 func (s *service) GetLatestPayment(tenantID string) (*Payment, error) {
 	return s.repo.GetLatestByTenant(tenantID)
+}
+
+// Record payment marks a payment as paid with the specified method
+func (s *service) RecordPayment(paymentID string, method PaymentMethod) error {
+	payment, err := s.repo.Get(paymentID)
+	if err != nil {
+		return fmt.Errorf("payment not found: %v", err)
+	}
+
+	// Validate payment method
+	if err := s.validatePaymentMethod(method); err != nil {
+		return err
+	}
+
+	// Set paid date and method
+	now := time.Now()
+	payment.PaidDate = &now
+	payment.PaymentMethod = &method
+
+	return s.repo.Update(*payment)
+}
+
+// Helper function to validate payment method
+func (s *service) validatePaymentMethod(method PaymentMethod) error {
+	switch method {
+	case PaymentMethodCredit, PaymentMethodCheck, PaymentMethodCash:
+		return nil
+	default:
+		return fmt.Errorf("invalid payment method: %s", method)
+	}
 }

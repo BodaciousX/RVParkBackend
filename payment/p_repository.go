@@ -18,8 +18,8 @@ func (r *sqlRepository) Create(payment Payment) error {
 	query := `
         INSERT INTO payments (
             id, tenant_id, amount_due, due_date, paid_date, 
-            next_payment_date, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+            next_payment_date, payment_method, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
     `
 
 	now := time.Now()
@@ -31,6 +31,7 @@ func (r *sqlRepository) Create(payment Payment) error {
 		payment.DueDate,
 		payment.PaidDate,
 		payment.NextPaymentDate,
+		payment.PaymentMethod,
 		now,
 	)
 	return err
@@ -40,13 +41,14 @@ func (r *sqlRepository) Get(id string) (*Payment, error) {
 	query := `
         SELECT 
             id, tenant_id, amount_due, due_date, paid_date,
-            next_payment_date, created_at, updated_at
+            next_payment_date, payment_method, created_at, updated_at
         FROM payments
         WHERE id = $1
     `
 
 	var payment Payment
 	var paidDate sql.NullTime
+	var paymentMethod sql.NullString
 
 	err := r.db.QueryRow(query, id).Scan(
 		&payment.ID,
@@ -55,6 +57,7 @@ func (r *sqlRepository) Get(id string) (*Payment, error) {
 		&payment.DueDate,
 		&paidDate,
 		&payment.NextPaymentDate,
+		&paymentMethod,
 		&payment.CreatedAt,
 		&payment.UpdatedAt,
 	)
@@ -67,6 +70,11 @@ func (r *sqlRepository) Get(id string) (*Payment, error) {
 		payment.PaidDate = &paidDate.Time
 	}
 
+	if paymentMethod.Valid {
+		method := PaymentMethod(paymentMethod.String)
+		payment.PaymentMethod = &method
+	}
+
 	return &payment, nil
 }
 
@@ -77,6 +85,7 @@ func (r *sqlRepository) Update(payment Payment) error {
             due_date = $3,
             paid_date = $4,
             next_payment_date = $5,
+            payment_method = $6,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
     `
@@ -88,6 +97,7 @@ func (r *sqlRepository) Update(payment Payment) error {
 		payment.DueDate,
 		payment.PaidDate,
 		payment.NextPaymentDate,
+		payment.PaymentMethod,
 	)
 	return err
 }
@@ -102,7 +112,7 @@ func (r *sqlRepository) ListByTenant(tenantID string) ([]Payment, error) {
 	query := `
         SELECT 
             id, tenant_id, amount_due, due_date, paid_date,
-            next_payment_date, created_at, updated_at
+            next_payment_date, payment_method, created_at, updated_at
         FROM payments
         WHERE tenant_id = $1
         ORDER BY due_date DESC
@@ -121,7 +131,7 @@ func (r *sqlRepository) ListByDateRange(start, end time.Time) ([]Payment, error)
 	query := `
         SELECT 
             id, tenant_id, amount_due, due_date, paid_date,
-            next_payment_date, created_at, updated_at
+            next_payment_date, payment_method, created_at, updated_at
         FROM payments
         WHERE due_date BETWEEN $1 AND $2
         ORDER BY due_date DESC
@@ -140,7 +150,7 @@ func (r *sqlRepository) ListByDateRangeAndTenant(start, end time.Time, tenantID 
 	query := `
         SELECT 
             id, tenant_id, amount_due, due_date, paid_date,
-            next_payment_date, created_at, updated_at
+            next_payment_date, payment_method, created_at, updated_at
         FROM payments
         WHERE due_date BETWEEN $1 AND $2 AND tenant_id = $3
         ORDER BY due_date DESC
@@ -159,7 +169,7 @@ func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
 	query := `
         SELECT 
             id, tenant_id, amount_due, due_date, paid_date,
-            next_payment_date, created_at, updated_at
+            next_payment_date, payment_method, created_at, updated_at
         FROM payments
         WHERE tenant_id = $1
         ORDER BY due_date DESC
@@ -168,6 +178,7 @@ func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
 
 	var payment Payment
 	var paidDate sql.NullTime
+	var paymentMethod sql.NullString
 
 	err := r.db.QueryRow(query, tenantID).Scan(
 		&payment.ID,
@@ -176,6 +187,7 @@ func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
 		&payment.DueDate,
 		&paidDate,
 		&payment.NextPaymentDate,
+		&paymentMethod,
 		&payment.CreatedAt,
 		&payment.UpdatedAt,
 	)
@@ -188,6 +200,11 @@ func (r *sqlRepository) GetLatestByTenant(tenantID string) (*Payment, error) {
 		payment.PaidDate = &paidDate.Time
 	}
 
+	if paymentMethod.Valid {
+		method := PaymentMethod(paymentMethod.String)
+		payment.PaymentMethod = &method
+	}
+
 	return &payment, nil
 }
 
@@ -196,6 +213,7 @@ func (r *sqlRepository) scanPayments(rows *sql.Rows) ([]Payment, error) {
 	for rows.Next() {
 		var payment Payment
 		var paidDate sql.NullTime
+		var paymentMethod sql.NullString
 
 		err := rows.Scan(
 			&payment.ID,
@@ -204,6 +222,7 @@ func (r *sqlRepository) scanPayments(rows *sql.Rows) ([]Payment, error) {
 			&payment.DueDate,
 			&paidDate,
 			&payment.NextPaymentDate,
+			&paymentMethod,
 			&payment.CreatedAt,
 			&payment.UpdatedAt,
 		)
@@ -213,6 +232,11 @@ func (r *sqlRepository) scanPayments(rows *sql.Rows) ([]Payment, error) {
 
 		if paidDate.Valid {
 			payment.PaidDate = &paidDate.Time
+		}
+
+		if paymentMethod.Valid {
+			method := PaymentMethod(paymentMethod.String)
+			payment.PaymentMethod = &method
 		}
 
 		payments = append(payments, payment)

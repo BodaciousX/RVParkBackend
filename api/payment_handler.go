@@ -14,11 +14,17 @@ import (
 )
 
 type CreatePaymentRequest struct {
-	TenantID        string    `json:"tenantId"`
-	AmountDue       float64   `json:"amountDue"`
-	DueDate         time.Time `json:"dueDate"`
-	NextPaymentDate time.Time `json:"nextPaymentDate"`
-	PaidDate        time.Time `json:"paidDate"`
+	TenantID        string                 `json:"tenantId"`
+	AmountDue       float64                `json:"amountDue"`
+	DueDate         time.Time              `json:"dueDate"`
+	NextPaymentDate time.Time              `json:"nextPaymentDate"`
+	PaidDate        time.Time              `json:"paidDate"`
+	PaymentMethod   *payment.PaymentMethod `json:"paymentMethod,omitempty"`
+}
+
+// RecordPaymentRequest is used when recording a payment with a method
+type RecordPaymentRequest struct {
+	PaymentMethod payment.PaymentMethod `json:"paymentMethod"`
 }
 
 func (s *Server) handlePaymentList(w http.ResponseWriter, r *http.Request) {
@@ -100,10 +106,16 @@ func (s *Server) handleCreatePayment(w http.ResponseWriter, r *http.Request) {
 		TenantID:        req.TenantID,
 		AmountDue:       req.AmountDue,
 		DueDate:         req.DueDate,
-		PaidDate:        &req.PaidDate,
 		NextPaymentDate: req.NextPaymentDate,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
+	}
+
+	// Add paid date and payment method if provided
+	if !req.PaidDate.IsZero() {
+		newPayment.PaidDate = &req.PaidDate
+		// Only set payment method if paid date is provided
+		newPayment.PaymentMethod = req.PaymentMethod
 	}
 
 	if err := s.paymentService.CreatePayment(newPayment); err != nil {
@@ -162,7 +174,39 @@ func (s *Server) handleDeletePayment(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *Server) handleRecordPayment(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/payments/")
+	id = strings.TrimSuffix(id, "/record")
+
+	var req RecordPaymentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.paymentService.RecordPayment(id, req.PaymentMethod); err != nil {
+		http.Error(w, fmt.Sprintf("failed to record payment: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Get updated payment to return
+	updatedPayment, err := s.paymentService.GetPayment(id)
+	if err != nil {
+		http.Error(w, "payment not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedPayment)
+}
+
 func (s *Server) handlePaymentOperations(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	if strings.HasSuffix(path, "/record") && r.Method == http.MethodPost {
+		s.handleRecordPayment(w, r)
+		return
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		s.handleGetPayment(w, r)

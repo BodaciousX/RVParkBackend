@@ -24,6 +24,10 @@ SELECT create_enum_if_not_exists('space_status',
     ARRAY['''Occupied''', '''Vacant''', '''Reserved''']
 );
 
+SELECT create_enum_if_not_exists('payment_method', 
+    ARRAY['''CREDIT''', '''CHECK''', '''CASH''']
+);
+
 -- Create tokens table if it doesn't exist
 CREATE TABLE IF NOT EXISTS tokens (
     token_hash TEXT PRIMARY KEY,
@@ -73,7 +77,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP
 );
 
--- Create simplified payments table
+-- Create simplified payments table with payment method
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
@@ -81,10 +85,23 @@ CREATE TABLE IF NOT EXISTS payments (
     due_date TIMESTAMP NOT NULL,
     paid_date TIMESTAMP,
     next_payment_date TIMESTAMP NOT NULL,
+    payment_method payment_method,
     created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
     updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
     CONSTRAINT amount_positive CHECK (amount_due > 0)
 );
+
+-- Add payment_method column to existing payments table if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'payments' AND column_name = 'payment_method'
+    ) THEN
+        ALTER TABLE payments ADD COLUMN payment_method payment_method;
+    END IF;
+END $$;
 
 -- Create indexes if they don't exist
 DO $$ 
@@ -123,6 +140,10 @@ BEGIN
 
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_next_payment_date') THEN
         CREATE INDEX idx_payments_next_payment_date ON payments(next_payment_date);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_payment_method') THEN
+        CREATE INDEX idx_payments_payment_method ON payments(payment_method);
     END IF;
 END $$;
 
