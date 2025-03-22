@@ -42,9 +42,9 @@ func NewServer(
 	s.Mux.Handle("/validate-token", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleValidateToken))))
 
 	// Protected routes with auth and CORS
-	// User routes - Admin only
-	s.Mux.Handle("/users", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleListUsers)))))
-	s.Mux.Handle("/users/", middleware.CORS(authMiddleware.RequireAuth(authMiddleware.RequireAdmin(http.HandlerFunc(s.handleUserOperations)))))
+	// User routes
+	s.Mux.Handle("/users", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListUsers))))
+	s.Mux.Handle("/users/", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleUserOperations))))
 
 	// Space routes
 	s.Mux.Handle("/spaces", middleware.CORS(authMiddleware.RequireAuth(http.HandlerFunc(s.handleListSpaces))))

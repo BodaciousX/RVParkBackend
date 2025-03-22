@@ -4,32 +4,25 @@
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Function to create enum if it doesn't exist
-CREATE OR REPLACE FUNCTION create_enum_if_not_exists(enum_name TEXT, enum_values TEXT[])
-RETURNS void AS $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = enum_name) THEN
-        EXECUTE 'CREATE TYPE ' || enum_name || ' AS ENUM (' ||
-            array_to_string(enum_values, ', ') || ')';
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+-- Drop existing tables if they exist (in reverse order of dependencies)
+DROP TABLE IF EXISTS payments CASCADE;
+DROP TABLE IF EXISTS tenants CASCADE;
+DROP TABLE IF EXISTS spaces CASCADE;
+DROP TABLE IF EXISTS sections CASCADE;
+DROP TABLE IF EXISTS tokens CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
--- Create enums if they don't exist
-SELECT create_enum_if_not_exists('user_role', 
-    ARRAY['''ADMIN''', '''STAFF''']
-);
+-- Drop existing types if they exist
+DROP TYPE IF EXISTS payment_method CASCADE;
+DROP TYPE IF EXISTS space_status CASCADE;
+DROP TYPE IF EXISTS user_role CASCADE;
 
-SELECT create_enum_if_not_exists('space_status', 
-    ARRAY['''Occupied''', '''Vacant''', '''Reserved''']
-);
+-- Create enums
+CREATE TYPE space_status AS ENUM ('Occupied', 'Vacant', 'Reserved');
+CREATE TYPE payment_method AS ENUM ('CREDIT', 'CHECK', 'CASH');
 
-SELECT create_enum_if_not_exists('payment_method', 
-    ARRAY['''CREDIT''', '''CHECK''', '''CASH''']
-);
-
--- Create tokens table if it doesn't exist
-CREATE TABLE IF NOT EXISTS tokens (
+-- Create tokens table
+CREATE TABLE tokens (
     token_hash TEXT PRIMARY KEY,
     user_id UUID NOT NULL,
     expires_at TIMESTAMP NOT NULL,
@@ -38,26 +31,25 @@ CREATE TABLE IF NOT EXISTS tokens (
     CONSTRAINT token_expiry_valid CHECK (expires_at > created_at)
 );
 
--- Create users table if it doesn't exist
-CREATE TABLE IF NOT EXISTS users (
+-- Create users table (without role column)
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(255) NOT NULL,
     password_hash TEXT NOT NULL,
-    role user_role NOT NULL,
     created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_login TIMESTAMP,
     CONSTRAINT email_valid CHECK (email ~* '^[A-Za-z0-9._+%-]+@[A-Za-z0-9.-]+[.][A-Za-z]+$')
 );
 
--- Create sections table if it doesn't exist
-CREATE TABLE IF NOT EXISTS sections (
+-- Create sections table
+CREATE TABLE sections (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) UNIQUE NOT NULL
 );
 
--- Create spaces table if it doesn't exist
-CREATE TABLE IF NOT EXISTS spaces (
+-- Create spaces table
+CREATE TABLE spaces (
     id VARCHAR(20) PRIMARY KEY,
     section_id UUID NOT NULL,
     status space_status NOT NULL DEFAULT 'Vacant',
@@ -67,8 +59,8 @@ CREATE TABLE IF NOT EXISTS spaces (
     updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP
 );
 
--- Create tenants table if it doesn't exist
-CREATE TABLE IF NOT EXISTS tenants (
+-- Create tenants table
+CREATE TABLE tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     move_in_date TIMESTAMP NOT NULL,
@@ -77,8 +69,8 @@ CREATE TABLE IF NOT EXISTS tenants (
     updated_at TIMESTAMP DEFAULT LOCALTIMESTAMP
 );
 
--- Create simplified payments table with payment method
-CREATE TABLE IF NOT EXISTS payments (
+-- Create payments table
+CREATE TABLE payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL,
     amount_due DECIMAL(10,2) NOT NULL,
@@ -91,63 +83,18 @@ CREATE TABLE IF NOT EXISTS payments (
     CONSTRAINT amount_positive CHECK (amount_due > 0)
 );
 
--- Add payment_method column to existing payments table if it doesn't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 
-        FROM information_schema.columns 
-        WHERE table_name = 'payments' AND column_name = 'payment_method'
-    ) THEN
-        ALTER TABLE payments ADD COLUMN payment_method payment_method;
-    END IF;
-END $$;
+-- Create indexes
+CREATE INDEX idx_tokens_user_id ON tokens(user_id);
+CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
+CREATE INDEX idx_spaces_section_id ON spaces(section_id);
+CREATE INDEX idx_spaces_tenant_id ON spaces(tenant_id);
+CREATE INDEX idx_tenants_space_id ON tenants(space_id);
+CREATE INDEX idx_payments_tenant_id ON payments(tenant_id);
+CREATE INDEX idx_payments_due_date ON payments(due_date);
+CREATE INDEX idx_payments_next_payment_date ON payments(next_payment_date);
+CREATE INDEX idx_payments_payment_method ON payments(payment_method);
 
--- Create indexes if they don't exist
-DO $$ 
-BEGIN
-    -- Token indexes
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tokens_user_id') THEN
-        CREATE INDEX idx_tokens_user_id ON tokens(user_id);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tokens_expires_at') THEN
-        CREATE INDEX idx_tokens_expires_at ON tokens(expires_at);
-    END IF;
-    
-    -- Space indexes
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_spaces_section_id') THEN
-        CREATE INDEX idx_spaces_section_id ON spaces(section_id);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_spaces_tenant_id') THEN
-        CREATE INDEX idx_spaces_tenant_id ON spaces(tenant_id);
-    END IF;
-    
-    -- Tenant indexes
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_tenants_space_id') THEN
-        CREATE INDEX idx_tenants_space_id ON tenants(space_id);
-    END IF;
-
-    -- Payment indexes
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_tenant_id') THEN
-        CREATE INDEX idx_payments_tenant_id ON payments(tenant_id);
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_due_date') THEN
-        CREATE INDEX idx_payments_due_date ON payments(due_date);
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_next_payment_date') THEN
-        CREATE INDEX idx_payments_next_payment_date ON payments(next_payment_date);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_payments_payment_method') THEN
-        CREATE INDEX idx_payments_payment_method ON payments(payment_method);
-    END IF;
-END $$;
-
--- Create or replace the updated_at trigger function
+-- Create the updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -156,99 +103,56 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create triggers if they don't exist
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_spaces_updated_at') THEN
-        CREATE TRIGGER update_spaces_updated_at
-            BEFORE UPDATE ON spaces
-            FOR EACH ROW
-            EXECUTE FUNCTION update_updated_at_column();
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tenants_updated_at') THEN
-        CREATE TRIGGER update_tenants_updated_at
-            BEFORE UPDATE ON tenants
-            FOR EACH ROW
-            EXECUTE FUNCTION update_updated_at_column();
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_payments_updated_at') THEN
-        CREATE TRIGGER update_payments_updated_at
-            BEFORE UPDATE ON payments
-            FOR EACH ROW
-            EXECUTE FUNCTION update_updated_at_column();
-    END IF;
-END $$;
+-- Create triggers
+CREATE TRIGGER update_spaces_updated_at
+    BEFORE UPDATE ON spaces
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
--- Add foreign key constraints if they don't exist
-DO $$ 
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'fk_spaces_section_id'
-    ) THEN
-        ALTER TABLE spaces
-        ADD CONSTRAINT fk_spaces_section_id
-        FOREIGN KEY (section_id)
-        REFERENCES sections(id)
-        ON DELETE CASCADE;
-    END IF;
+CREATE TRIGGER update_tenants_updated_at
+    BEFORE UPDATE ON tenants
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'fk_spaces_tenant'
-    ) THEN
-        ALTER TABLE spaces
-        ADD CONSTRAINT fk_spaces_tenant
-        FOREIGN KEY (tenant_id)
-        REFERENCES tenants(id)
-        ON DELETE SET NULL;
-    END IF;
+CREATE TRIGGER update_payments_updated_at
+    BEFORE UPDATE ON payments
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'fk_tenants_space'
-    ) THEN
-        ALTER TABLE tenants
-        ADD CONSTRAINT fk_tenants_space
-        FOREIGN KEY (space_id)
-        REFERENCES spaces(id)
-        ON DELETE SET NULL;
-    END IF;
+-- Add foreign key constraints
+ALTER TABLE spaces
+ADD CONSTRAINT fk_spaces_section_id
+FOREIGN KEY (section_id)
+REFERENCES sections(id)
+ON DELETE CASCADE;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.table_constraints 
-        WHERE constraint_name = 'fk_payments_tenant'
-    ) THEN
-        ALTER TABLE payments
-        ADD CONSTRAINT fk_payments_tenant
-        FOREIGN KEY (tenant_id)
-        REFERENCES tenants(id)
-        ON DELETE CASCADE;
-    END IF;
-END $$;
+ALTER TABLE spaces
+ADD CONSTRAINT fk_spaces_tenant
+FOREIGN KEY (tenant_id)
+REFERENCES tenants(id)
+ON DELETE SET NULL;
 
--- Insert default sections if they don't exist
-INSERT INTO sections (name)
-SELECT 'Mane Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Mane Street');
+ALTER TABLE tenants
+ADD CONSTRAINT fk_tenants_space
+FOREIGN KEY (space_id)
+REFERENCES spaces(id)
+ON DELETE SET NULL;
 
-INSERT INTO sections (name)
-SELECT 'Grace Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Grace Street');
+ALTER TABLE payments
+ADD CONSTRAINT fk_payments_tenant
+FOREIGN KEY (tenant_id)
+REFERENCES tenants(id)
+ON DELETE CASCADE;
 
-INSERT INTO sections (name)
-SELECT 'Trae Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Trae Street');
+-- Insert default sections
+INSERT INTO sections (name) VALUES ('Mane Street');
+INSERT INTO sections (name) VALUES ('Grace Street');
+INSERT INTO sections (name) VALUES ('Trae Street');
+INSERT INTO sections (name) VALUES ('Summer Street');
+INSERT INTO sections (name) VALUES ('Rock Street');
+INSERT INTO sections (name) VALUES ('Cedar Street');
 
-INSERT INTO sections (name)
-SELECT 'Summer Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Summer Street');
-
-INSERT INTO sections (name)
-SELECT 'Rock Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Rock Street');
-
-INSERT INTO sections (name)
-SELECT 'Cedar Street' WHERE NOT EXISTS (SELECT 1 FROM sections WHERE name = 'Cedar Street');
-
--- Create space initialization function if it doesn't exist
+-- Create space initialization function
 CREATE OR REPLACE FUNCTION initialize_section_spaces(
     section_name VARCHAR,
     prefix CHAR,
@@ -263,18 +167,16 @@ BEGIN
     
     FOR i IN 1..space_count LOOP
         INSERT INTO spaces (id, section_id, status)
-        SELECT 
+        VALUES (
             prefix || i::TEXT,
             section_id,
             'Vacant'
-        WHERE NOT EXISTS (
-            SELECT 1 FROM spaces WHERE id = prefix || i::TEXT
         );
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;
 
--- Initialize spaces if they don't exist
+-- Initialize spaces
 SELECT initialize_section_spaces('Mane Street', 'M', 24);
 SELECT initialize_section_spaces('Grace Street', 'G', 32);
 SELECT initialize_section_spaces('Trae Street', 'T', 32);

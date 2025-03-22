@@ -21,10 +21,9 @@ type LoginResponse struct {
 }
 
 type CreateUserRequest struct {
-	Email    string    `json:"email"`
-	Username string    `json:"username"`
-	Password string    `json:"password"`
-	Role     user.Role `json:"role"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +68,6 @@ func (s *Server) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	newUser := user.User{
 		Email:     req.Email,
 		Username:  req.Username,
-		Role:      req.Role,
 		CreatedAt: time.Now(),
 	}
 

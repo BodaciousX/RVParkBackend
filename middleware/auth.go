@@ -57,22 +57,3 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-
-func (m *AuthMiddleware) RequireAdmin(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get user from context (set by RequireAuth)
-		contextUser := r.Context().Value(userContextKey)
-		if contextUser == nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		user := contextUser.(*user.User)
-		if user.Role != "ADMIN" {
-			http.Error(w, "forbidden", http.StatusForbidden)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}

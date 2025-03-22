@@ -109,79 +109,40 @@ func checkRequiredTables(db *sql.DB) error {
 	return nil
 }
 
-func ensureStaffExists(userService user.Service) error {
-	// Get staff credentials from environment variables
-	staffEmail := os.Getenv("STAFF_EMAIL")
-	if staffEmail == "" {
-		staffEmail = "staff@rvpark.com"
+func ensureUserExists(userService user.Service) error {
+	// Get user credentials from environment variables
+	userEmail := os.Getenv("USER_EMAIL")
+	if userEmail == "" {
+		userEmail = "user@rvpark.com"
 	}
 
-	staffPassword := os.Getenv("STAFF_PASSWORD")
-	if staffPassword == "" {
-		staffPassword = fmt.Sprintf("staff%d", time.Now().Unix())
-		log.Printf("WARNING: Generated random staff password: %s", staffPassword)
+	userPassword := os.Getenv("USER_PASSWORD")
+	if userPassword == "" {
+		userPassword = fmt.Sprintf("user%d", time.Now().Unix())
+		log.Printf("WARNING: Generated random user password: %s", userPassword)
 	}
 
-	// Check if staff exists
-	_, err := userService.GetUserByEmail(staffEmail)
+	// Check if user exists
+	_, err := userService.GetUserByEmail(userEmail)
 	if err == nil {
-		log.Printf("Existing staff account found with email: %s\n", staffEmail)
+		log.Printf("Existing user account found with email: %s\n", userEmail)
 		return nil
 	}
 
-	// Create new staff user
-	staffUser := user.User{
+	// Create new user
+	newUser := user.User{
 		ID:        uuid.New().String(),
-		Email:     staffEmail,
-		Username:  "staff",
-		Role:      user.RoleStaff,
+		Email:     userEmail,
+		Username:  "user",
 		CreatedAt: time.Now(),
 	}
 
-	err = userService.CreateUser(staffUser, staffPassword)
+	err = userService.CreateUser(newUser, userPassword)
 	if err != nil {
-		return fmt.Errorf("failed to create staff user: %v", err)
+		return fmt.Errorf("failed to create user: %v", err)
 	}
 
-	log.Printf("New staff account created with email: %s\n", staffEmail)
-	return nil
-}
-
-func ensureAdminExists(userService user.Service) error {
-	// Get admin credentials from environment variables
-	adminEmail := os.Getenv("ADMIN_EMAIL")
-	if adminEmail == "" {
-		adminEmail = "admin@rvpark.com"
-	}
-
-	adminPassword := os.Getenv("ADMIN_PASSWORD")
-	if adminPassword == "" {
-		adminPassword = fmt.Sprintf("admin%d", time.Now().Unix())
-		log.Printf("WARNING: Generated random admin password: %s", adminPassword)
-	}
-
-	// Check if admin exists
-	_, err := userService.GetUserByEmail(adminEmail)
-	if err == nil {
-		log.Printf("Existing admin account found with email: %s\n", adminEmail)
-		return nil
-	}
-
-	// Create new admin user
-	adminUser := user.User{
-		ID:        uuid.New().String(),
-		Email:     adminEmail,
-		Username:  "admin",
-		Role:      user.RoleAdmin,
-		CreatedAt: time.Now(),
-	}
-
-	err = userService.CreateUser(adminUser, adminPassword)
-	if err != nil {
-		return fmt.Errorf("failed to create admin user: %v", err)
-	}
-
-	log.Printf("New admin account created with email: %s\n", adminEmail)
+	log.Printf("New user account created with email: %s\n", userEmail)
 	return nil
 }
 
@@ -234,13 +195,9 @@ func main() {
 	spaceService := space.NewService(spaceRepo, tenantService)
 	paymentService := payment.NewService(paymentRepo)
 
-	// Ensure admin and staff users exist
-	if err := ensureAdminExists(userService); err != nil {
-		log.Fatalf("Failed to ensure admin exists: %v", err)
-	}
-
-	if err := ensureStaffExists(userService); err != nil {
-		log.Fatalf("Failed to ensure staff exists: %v", err)
+	// Ensure user exists
+	if err := ensureUserExists(userService); err != nil {
+		log.Fatalf("Failed to ensure user exists: %v", err)
 	}
 
 	// Initialize auth middleware

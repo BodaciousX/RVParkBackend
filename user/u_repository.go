@@ -20,10 +20,9 @@ func (r *sqlRepository) Create(user User) error {
 			email,
 			username,
 			password_hash,
-			role,
 			created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6
+			$1, $2, $3, $4, $5
 		)
 	`
 
@@ -33,7 +32,6 @@ func (r *sqlRepository) Create(user User) error {
 		user.Email,
 		user.Username,
 		user.PasswordHash,
-		user.Role,
 		user.CreatedAt,
 	)
 	return err
@@ -46,7 +44,6 @@ func (r *sqlRepository) Get(id string) (*User, error) {
 			email,
 			username,
 			password_hash,
-			role,
 			created_at,
 			last_login
 		FROM users
@@ -61,7 +58,6 @@ func (r *sqlRepository) Get(id string) (*User, error) {
 		&user.Email,
 		&user.Username,
 		&user.PasswordHash,
-		&user.Role,
 		&user.CreatedAt,
 		&lastLogin,
 	)
@@ -83,7 +79,6 @@ func (r *sqlRepository) GetByEmail(email string) (*User, error) {
 			email,
 			username,
 			password_hash,
-			role,
 			created_at,
 			last_login
 		FROM users
@@ -98,7 +93,6 @@ func (r *sqlRepository) GetByEmail(email string) (*User, error) {
 		&user.Email,
 		&user.Username,
 		&user.PasswordHash,
-		&user.Role,
 		&user.CreatedAt,
 		&lastLogin,
 	)
@@ -119,8 +113,7 @@ func (r *sqlRepository) Update(user User) error {
 			email = $2,
 			username = $3,
 			password_hash = $4,
-			role = $5,
-			last_login = $6
+			last_login = $5
 		WHERE id = $1
 	`
 
@@ -135,7 +128,6 @@ func (r *sqlRepository) Update(user User) error {
 		user.Email,
 		user.Username,
 		user.PasswordHash,
-		user.Role,
 		lastLogin,
 	)
 	return err
