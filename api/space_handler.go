@@ -46,7 +46,7 @@ func (s *Server) handleUpdateSpace(w http.ResponseWriter, r *http.Request) {
 
 	// Update the space
 	if err := s.spaceService.UpdateSpace(updateSpace); err != nil {
-		http.Error(w, "failed to update space", http.StatusInternalServerError)
+		http.Error(w, "failed to update space: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -93,11 +93,19 @@ func (s *Server) handleReserveSpace(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	if err := s.spaceService.ReserveSpace(id); err != nil {
-		http.Error(w, "failed to reserve space", http.StatusInternalServerError)
+		http.Error(w, "failed to reserve space: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Get the updated space to return
+	updatedSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, "failed to get updated space", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedSpace)
 }
 
 func (s *Server) handleUnreserveSpace(w http.ResponseWriter, r *http.Request) {
@@ -106,11 +114,19 @@ func (s *Server) handleUnreserveSpace(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	if err := s.spaceService.UnreserveSpace(id); err != nil {
-		http.Error(w, "failed to unreserve space", http.StatusInternalServerError)
+		http.Error(w, "failed to unreserve space: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Get the updated space to return
+	updatedSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, "failed to get updated space", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedSpace)
 }
 
 type MoveInRequest struct {
@@ -129,7 +145,7 @@ func (s *Server) handleMoveIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.spaceService.MoveIn(id, req.TenantID); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to move in: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -150,9 +166,17 @@ func (s *Server) handleMoveOut(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	if err := s.spaceService.MoveOut(id); err != nil {
-		http.Error(w, "failed to move out tenant", http.StatusInternalServerError)
+		http.Error(w, "failed to move out tenant: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// Get updated space to return
+	updatedSpace, err := s.spaceService.GetSpace(id)
+	if err != nil {
+		http.Error(w, "failed to get updated space", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(updatedSpace)
 }

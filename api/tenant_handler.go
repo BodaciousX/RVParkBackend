@@ -46,7 +46,7 @@ func (s *Server) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.tenantService.CreateTenant(newTenant); err != nil {
-		http.Error(w, "failed to create tenant", http.StatusInternalServerError)
+		http.Error(w, "failed to create tenant: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -85,7 +85,7 @@ func (s *Server) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
 	updateTenant.ID = id
 
 	if err := s.tenantService.UpdateTenant(updateTenant); err != nil {
-		http.Error(w, "failed to update tenant", http.StatusInternalServerError)
+		http.Error(w, "failed to update tenant: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (s *Server) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	if err := s.tenantService.DeleteTenant(id); err != nil {
-		http.Error(w, "failed to delete tenant", http.StatusInternalServerError)
+		http.Error(w, "failed to delete tenant: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

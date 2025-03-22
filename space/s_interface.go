@@ -1,6 +1,8 @@
 // space/s_interface.go
 package space
 
+// No import for tenant package needed
+
 type Service interface {
 	ListSpaces() (map[string][]Space, error)
 	GetSpace(id string) (*Space, error)

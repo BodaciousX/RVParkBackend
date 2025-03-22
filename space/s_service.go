@@ -3,19 +3,15 @@ package space
 
 import (
 	"fmt"
-
-	"github.com/BodaciousX/RVParkBackend/tenant"
 )
 
 type service struct {
-	repo          Repository
-	tenantService tenant.Service
+	repo Repository
 }
 
-func NewService(repo Repository, tenantService tenant.Service) Service {
+func NewService(repo Repository) Service {
 	return &service{
-		repo:          repo,
-		tenantService: tenantService,
+		repo: repo,
 	}
 }
 

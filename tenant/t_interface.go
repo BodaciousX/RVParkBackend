@@ -1,6 +1,7 @@
 // tenant/t_interface.go
 package tenant
 
+// TenantService interface now indicates it depends on SpaceService
 type Service interface {
 	// Core tenant management
 	ListTenants() ([]Tenant, error)
