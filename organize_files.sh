@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the target directory
-TARGET_DIR="ze_backend_files"
+TARGET_DIR="RV_backend_files"
 
 # Remove the directory if it exists without prompting
 if [ -d "$TARGET_DIR" ]; then
