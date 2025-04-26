@@ -1,4 +1,4 @@
-// user/u_service.go contains the implementation of the user service.
+// user/service.go contains the implementation of the user service.
 package user
 
 import (

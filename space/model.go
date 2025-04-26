@@ -1,4 +1,4 @@
-// space/s_model.go
+// space/model.go
 package space
 
 type Space struct {

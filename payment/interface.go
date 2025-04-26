@@ -1,4 +1,4 @@
-// payment/p_interface.go
+// payment/interface.go
 package payment
 
 import "time"

@@ -1,4 +1,4 @@
-// tenant/t_service.go
+// tenant/service.go
 package tenant
 
 import (

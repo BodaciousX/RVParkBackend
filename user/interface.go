@@ -1,4 +1,4 @@
-// user/u_interface.go contains the interface for the user package.
+// user/interface.go contains the interface for the user package.
 package user
 
 type Service interface {

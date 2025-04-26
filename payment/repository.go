@@ -1,4 +1,4 @@
-// payment/p_repository.go
+// payment/repository.go
 package payment
 
 import (

@@ -1,4 +1,4 @@
-// tenant/t_repository.go
+// tenant/repository.go
 package tenant
 
 import (

@@ -1,4 +1,4 @@
-// tenant/t_interface.go
+// tenant/interface.go
 package tenant
 
 // TenantService interface now indicates it depends on SpaceService

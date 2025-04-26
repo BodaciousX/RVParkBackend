@@ -1,4 +1,4 @@
-// tenant/t_model.go
+// tenant/model.go
 package tenant
 
 import "time"

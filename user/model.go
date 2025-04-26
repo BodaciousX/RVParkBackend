@@ -1,4 +1,4 @@
-// user/u_model.go contains the struct definitions for the user package.
+// user/model.go contains the struct definitions for the user package.
 package user
 
 import "time"

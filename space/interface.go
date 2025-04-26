@@ -1,4 +1,4 @@
-// space/s_interface.go
+// space/interface.go
 package space
 
 // No import for tenant package needed

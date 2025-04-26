@@ -1,4 +1,4 @@
-// payment/p_service.go
+// payment/service.go
 package payment
 
 import (
