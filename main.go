@@ -19,7 +19,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// getDBConfig returns the database connection string with appropriate SSL settings
 func getDBConfig() string {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
