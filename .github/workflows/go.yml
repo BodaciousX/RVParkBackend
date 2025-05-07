@@ -1,0 +1,50 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbuser
+          POSTGRES_PASSWORD: dbpassword
+          POSTGRES_DB: RVParkDB
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Initialize Database
+      run: |
+        psql -h localhost -p 5433 -U dbuser -d RVParkDB -f docker/init.sql
+      env:
+        PGPASSWORD: dbpassword
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+      env:
+        DATABASE_URL: postgres://dbuser:dbpassword@localhost:5433/RVParkDB
+        GO_ENV: development
