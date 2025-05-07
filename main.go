@@ -25,7 +25,6 @@ func getDBConfig() string {
 		log.Fatal("DATABASE_URL environment variable is required")
 	}
 
-	// Always use SSL in production (Render requirement)
 	if os.Getenv("GO_ENV") != "development" {
 		if !strings.Contains(dbURL, "sslmode=") {
 			if strings.Contains(dbURL, "?") {
