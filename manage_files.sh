@@ -17,7 +17,7 @@ fi
 
 # Create directory and copy files
 echo "Creating all_files directory and copying files..."
-mkdir all_files && cp api/* docker/* middleware/* payment/* space/* tenant/* user/* main.go run.sh all_files/
+mkdir all_files && cp api/* docker/* middleware/* payment/* space/* tenant/* user/* main.go integration_test.go run.sh all_files/
 
 # Check if the copy was successful
 if [ $? -eq 0 ]; then
